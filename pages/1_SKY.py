@@ -92,7 +92,7 @@ def generate_tcp_periodic_frame(file: str, settings: dict) -> pandas.DataFrame:
     return generate_frame(mapping=settings["tstat"]["tcp"]["periodic"]["columns"], 
                           delimiter=" ", file=file)
 
-def process_frame_timestamp(tcp: pandas.DataFrame, bot: pandas.DataFrame, column: str):
+def reset_frame_timestamp(tcp: pandas.DataFrame, bot: pandas.DataFrame, column: str):
 
     tcp[column] -= float(bot.loc[0, "event_absolute_unix_ms"])
 
@@ -113,7 +113,7 @@ def process_tcp_periodic_frame(tcp_periodic: pandas.DataFrame,
     if "f_point_unix_dt" not in tcp_periodic.columns:
         tcp_periodic["f_point_unix_dt"] = pandas.to_datetime(tcp_periodic["f_point_unix_ms"],
                                                              unit="ms", origin="unix")
-    
+            
     # Group by the TCP periodic dataframe by using the source IP address, the destination
     # IP address, then the source port and the destination port.
     groups = tcp_periodic.groupby(["client_ip", "server_ip", "client_port", "server_port"])
@@ -365,7 +365,7 @@ def tcp_complete_tokens_volume_distribution(tcp: pandas.DataFrame,
 
     return fig
 
-def tcp_periodic_tokens_volume_distribution(metrics: pandas.DataFrame, 
+def tcp_periodic_tokens_volume_distribution(mts: pandas.DataFrame, 
                                             bot: pandas.DataFrame, token: str, title: str):
     
     def generate_volume(b):
@@ -426,10 +426,10 @@ def tcp_periodic_tokens_volume_distribution(metrics: pandas.DataFrame,
 
     # Filter the frame for displaying only the requested token (use method copy()
     # for editing at free will the object in memory)
-    copy = metrics.loc[metrics["token"] == token].copy()
+    copy = mts.loc[mts["token"] == token].copy()
 
     # Use .loc to avoid the SettingWithCopyWarning and create the 'index' column
-    copy.loc[:, "index"] = metrics.apply(lambda x: f":{x['client_port']}:{x['server_port']} {x['token']}", axis=1)
+    copy.loc[:, "index"] = mts.apply(lambda x: f":{x['client_port']}:{x['server_port']} {x['token']}", axis=1)
 
     # Generate a description
     copy["description"] = copy.apply(lambda x: generate_description(x), axis=1)
@@ -473,105 +473,70 @@ def tcp_periodic_tokens_volume_distribution(metrics: pandas.DataFrame,
 
     return fig
 
+def tcp_periodic_tokens_volume_progression(metrics: pandas.DataFrame,
+                                           bot: pandas.DataFrame, identity: str, title: str):
+    
+    pass
 
-with open(SETTINGS, "r") as f:
-    settings = yaml.safe_load(f)
+def process_tracing_data(bot_file, tcp_complete_file, tcp_periodic_file, settings):
 
-bot_log_00Mbits = generate_bot_frame(file=BOT_TRACING_FILE_DESKTOP_00MBITS, settings=settings)
-tcp_complete_00Mbits = generate_tcp_complete_frame(file=TCP_COMPLETE_TRACING_FILE_DESKTOP_00MBITS, settings=settings)
-tcp_periodic_00Mbits = generate_tcp_periodic_frame(file=TCP_PERIODIC_TRACING_FILE_DESKTOP_00MBITS, settings=settings)
+    bot_frame = generate_bot_frame(file=bot_file, settings=settings)
+    tcp_complete_frame = generate_tcp_complete_frame(file=tcp_complete_file, settings=settings)
+    tcp_periodic_frame = generate_tcp_periodic_frame(file=tcp_periodic_file, settings=settings)
 
-bot_log_1Mbits = generate_bot_frame(file=BOT_TRACING_FILE_DESKTOP_1MBITS, settings=settings)
-tcp_complete_1Mbits = generate_tcp_complete_frame(file=TCP_COMPLETE_TRACING_FILE_DESKTOP_1MBITS, settings=settings)
-tcp_periodic_1Mbits = generate_tcp_periodic_frame(file=TCP_PERIODIC_TRACING_FILE_DESKTOP_1MBITS, settings=settings)
+    reset_frame_timestamp(tcp=tcp_complete_frame, bot=bot_frame, column="fst_packet_observed_unix_ms")
+    reset_frame_timestamp(tcp=tcp_complete_frame, bot=bot_frame, column="lst_packet_observed_unix_ms")
+    reset_frame_timestamp(tcp=tcp_periodic_frame, bot=bot_frame, column="s_point_unix_ms")
 
-bot_log_4Mbits = generate_bot_frame(file=BOT_TRACING_FILE_DESKTOP_4MBITS, settings=settings)
-tcp_complete_4Mbits = generate_tcp_complete_frame(file=TCP_COMPLETE_TRACING_FILE_DESKTOP_4MBITS, settings=settings)
-tcp_periodic_4Mbits = generate_tcp_periodic_frame(file=TCP_PERIODIC_TRACING_FILE_DESKTOP_4MBITS, settings=settings)
-
-
-process_frame_timestamp(tcp=tcp_complete_00Mbits, bot=bot_log_00Mbits, column="fst_packet_observed_unix_ms")
-process_frame_timestamp(tcp=tcp_complete_00Mbits, bot=bot_log_00Mbits, column="lst_packet_observed_unix_ms")
-process_frame_timestamp(tcp=tcp_periodic_00Mbits, bot=bot_log_00Mbits, column="s_point_unix_ms")
-periodic_metrics_00Mbits = process_tcp_periodic_frame(tcp_complete=tcp_complete_00Mbits, 
-                                                      tcp_periodic=tcp_periodic_00Mbits, bot=bot_log_00Mbits)
-
-process_frame_timestamp(tcp=tcp_complete_4Mbits, bot=bot_log_4Mbits, column="fst_packet_observed_unix_ms")
-process_frame_timestamp(tcp=tcp_complete_4Mbits, bot=bot_log_4Mbits, column="lst_packet_observed_unix_ms")
-process_frame_timestamp(tcp=tcp_periodic_4Mbits, bot=bot_log_4Mbits, column="s_point_unix_ms")
-periodic_metrics_4Mbits = process_tcp_periodic_frame(tcp_complete=tcp_complete_4Mbits, 
-                                                     tcp_periodic=tcp_periodic_4Mbits, bot=bot_log_4Mbits)
-
-process_frame_timestamp(tcp=tcp_complete_1Mbits, bot=bot_log_1Mbits, column="fst_packet_observed_unix_ms")
-process_frame_timestamp(tcp=tcp_complete_1Mbits, bot=bot_log_1Mbits, column="lst_packet_observed_unix_ms")
-process_frame_timestamp(tcp=tcp_periodic_1Mbits, bot=bot_log_1Mbits, column="s_point_unix_ms")
-periodic_metrics_1Mbits = process_tcp_periodic_frame(tcp_complete=tcp_complete_1Mbits, 
-                                                     tcp_periodic=tcp_periodic_1Mbits, bot=bot_log_1Mbits)
-
+    tcp_periodic_frame = process_tcp_periodic_frame(tcp_complete=tcp_complete_frame, tcp_periodic=tcp_periodic_frame, bot=bot_frame)
+    
+    return (bot_frame, tcp_complete_frame, tcp_periodic_frame)
 
 def main():
-    with open(os.path.join(os.getcwd(), "htmls", "sky_over_tcp.html"), "r") as f:
-        homepage_content = f.read()  
-    streamlit.markdown(homepage_content, unsafe_allow_html=True)
 
-    token = streamlit.selectbox("Seleziona qui il token da filtrare", set(tcp_complete_00Mbits["token"]))
-    streamlit.plotly_chart(tcp_complete_tokens_distribution(tcp=tcp_complete_00Mbits, 
-                                                            bot=bot_log_00Mbits,
+    with open(SETTINGS, "r") as f:
+        settings = yaml.safe_load(f)
+
+    mappings = {
+        "illimitata": (BOT_TRACING_FILE_DESKTOP_00MBITS, TCP_COMPLETE_TRACING_FILE_DESKTOP_00MBITS, TCP_PERIODIC_TRACING_FILE_DESKTOP_00MBITS),
+        "moderatamente limitata":  (BOT_TRACING_FILE_DESKTOP_4MBITS,  TCP_COMPLETE_TRACING_FILE_DESKTOP_4MBITS,  TCP_PERIODIC_TRACING_FILE_DESKTOP_4MBITS),
+        "estremamente limitata":   (BOT_TRACING_FILE_DESKTOP_1MBITS,  TCP_COMPLETE_TRACING_FILE_DESKTOP_1MBITS,  TCP_PERIODIC_TRACING_FILE_DESKTOP_1MBITS)
+    }
+
+    scenarios = {}
+    for scenario, files in mappings.items():
+        scenarios[scenario] = process_tracing_data(*files, settings=settings)
+    
+    token = streamlit.selectbox("Seleziona qui il token da filtrare", set(scenarios["illimitata"][1]["token"]))
+    streamlit.plotly_chart(tcp_complete_tokens_distribution(tcp=scenarios["illimitata"][1], 
+                                                            bot=scenarios["illimitata"][0],
                                                             token=token, 
                                                             title="Distribuzione dei token nel tempo"))
+    
+    # For each scenario, plot the download and the upload volumes associated with the tokens
+    for scenario, frames in scenarios.items():
+        title = f"Volumi traffico da server a client su trasferimenti TCP a banda {scenario}"
+        streamlit.plotly_chart(tcp_complete_tokens_volume_distribution(tcp=frames[1],
+                                                                       bot=frames[0],
+                                                                       side="server_app_xmitted_bytes",
+                                                                       title=title))
+        title = f"Volumi traffico da client a server su trasferimenti TCP a banda {scenario}"
+        streamlit.plotly_chart(tcp_complete_tokens_volume_distribution(tcp=frames[1],
+                                                                       bot=frames[0],
+                                                                       side="client_app_xmitted_bytes",
+                                                                       title=title))
+        streamlit.markdown("---")
 
-    # 32 Mbits
-    streamlit.plotly_chart(tcp_complete_tokens_volume_distribution(tcp=tcp_complete_00Mbits, 
-                                                                    bot=bot_log_00Mbits,
-                                                                    side="server_app_xmitted_bytes",
-                                                                    title="Volumi traffico da server a client su trasferimenti TCP a banda non limitata"))
-    streamlit.plotly_chart(tcp_complete_tokens_volume_distribution(tcp=tcp_complete_00Mbits, 
-                                                                    bot=bot_log_00Mbits,
-                                                                    side="client_app_xmitted_bytes",
-                                                                    title="Volumi traffico da client a server su trasferimenti TCP a banda non limitata"))
-    streamlit.markdown("---")
+    # For each scenario, plot the download and the upload volumes associated with the tokens, periodically
+    # by following the insights in the Tstat log periodic
+    for scenario, frames in scenarios.items():
+        title = f"Analisi periodica dei token su trasferimenti TCP in condizione di banda {scenario}"
+        streamlit.plotly_chart(tcp_periodic_tokens_volume_distribution(mts=frames[2], 
+                                                                       bot=frames[0],
+                                                                       token=token, 
+                                                                       title=title))
+        streamlit.markdown("---")
 
-    # 4 Mbits
-    streamlit.plotly_chart(tcp_complete_tokens_volume_distribution(tcp=tcp_complete_4Mbits, 
-                                                                    bot=bot_log_4Mbits,
-                                                                    side="server_app_xmitted_bytes",
-                                                                    title="Volumi traffico da server a client su trasferimenti TCP a banda moderatamente limitata"))
-    streamlit.plotly_chart(tcp_complete_tokens_volume_distribution(tcp=tcp_complete_4Mbits, 
-                                                                    bot=bot_log_4Mbits,
-                                                                    side="client_app_xmitted_bytes",
-                                                                    title="Volumi traffico da client a server su trasferimenti TCP a banda moderatamente limitata"))
-    streamlit.markdown("---")
-
-    # 1 Mbits
-    streamlit.plotly_chart(tcp_complete_tokens_volume_distribution(tcp=tcp_complete_1Mbits, 
-                                                                    bot=bot_log_1Mbits,
-                                                                    side="server_app_xmitted_bytes",
-                                                                    title="Volumi traffico da server a client su trasferimenti TCP a banda estremamente limitata"))
-    streamlit.plotly_chart(tcp_complete_tokens_volume_distribution(tcp=tcp_complete_1Mbits, 
-                                                                    bot=bot_log_1Mbits,
-                                                                    side="client_app_xmitted_bytes",
-                                                                    title="Volumi traffico da client a server su trasferimenti TCP a banda estremamente limitata"))
-    streamlit.markdown("---")
-
-    streamlit.markdown("### Analisi periodica dei volumi")
-    # Experiments at infinite band (00Mbits)
-    streamlit.plotly_chart(tcp_periodic_tokens_volume_distribution(metrics=periodic_metrics_00Mbits, 
-                                                                bot=bot_log_00Mbits,
-                                                                token=token, 
-                                                                title="Analisi periodica dei token in condizione di banda non limitata"))
-    streamlit.markdown("---")
-
-    streamlit.plotly_chart(tcp_periodic_tokens_volume_distribution(metrics=periodic_metrics_4Mbits, 
-                                                                bot=bot_log_4Mbits,
-                                                                token=token, 
-                                                                title="Analisi periodica dei token in condizione di banda moderatamente limitata"))
-    streamlit.markdown("---")
-
-    streamlit.plotly_chart(tcp_periodic_tokens_volume_distribution(metrics=periodic_metrics_1Mbits, 
-                                                                bot=bot_log_1Mbits,
-                                                                token=token, 
-                                                                title="Analisi periodica dei token in condizione di banda fortemente limitata"))
-    streamlit.markdown("---")
     streamlit.markdown("# Analisi del comportamento SKY al livello UDP")
     streamlit.markdown("---")
     streamlit.markdown("# Analisi del comportamento SKY al livello QUIC")
