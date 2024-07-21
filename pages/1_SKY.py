@@ -22,17 +22,17 @@ import plotly.graph_objects
 #############################################################
 SETTINGS = os.path.join(os.getcwd(), "data", "settings.yaml")
 
-TCP_COMPLETE_TRACING_FILE_DESKTOP_00MBITS = os.path.join(os.getcwd(), "data/sky/tcp/desktop/00Mbits", "log_tcp_complete")
-TCP_PERIODIC_TRACING_FILE_DESKTOP_00MBITS = os.path.join(os.getcwd(), "data/sky/tcp/desktop/00Mbits", "log_tcp_periodic")
-BOT_TRACING_FILE_DESKTOP_00MBITS = os.path.join(os.getcwd(), "data/sky/tcp/desktop/00Mbits", "streambot_trace.csv")
+TCP_COMPLETE_TRACING_FILE_DESKTOP_00MBITS = os.path.join(os.getcwd(), "data/sky/desktop/00Mbits", "log_tcp_complete")
+TCP_PERIODIC_TRACING_FILE_DESKTOP_00MBITS = os.path.join(os.getcwd(), "data/sky/desktop/00Mbits", "log_tcp_periodic")
+BOT_TRACING_FILE_DESKTOP_00MBITS = os.path.join(os.getcwd(), "data/sky/desktop/00Mbits", "streambot_trace.csv")
 
-TCP_COMPLETE_TRACING_FILE_DESKTOP_4MBITS = os.path.join(os.getcwd(), "data/sky/tcp/desktop/4Mbits", "log_tcp_complete")
-TCP_PERIODIC_TRACING_FILE_DESKTOP_4MBITS = os.path.join(os.getcwd(), "data/sky/tcp/desktop/4Mbits", "log_tcp_periodic")
-BOT_TRACING_FILE_DESKTOP_4MBITS = os.path.join(os.getcwd(), "data/sky/tcp/desktop/4Mbits", "streambot_trace.csv")
+TCP_COMPLETE_TRACING_FILE_DESKTOP_4MBITS = os.path.join(os.getcwd(), "data/sky/desktop/4Mbits", "log_tcp_complete")
+TCP_PERIODIC_TRACING_FILE_DESKTOP_4MBITS = os.path.join(os.getcwd(), "data/sky/desktop/4Mbits", "log_tcp_periodic")
+BOT_TRACING_FILE_DESKTOP_4MBITS = os.path.join(os.getcwd(), "data/sky/desktop/4Mbits", "streambot_trace.csv")
 
-TCP_COMPLETE_TRACING_FILE_DESKTOP_1MBITS = os.path.join(os.getcwd(), "data/sky/tcp/desktop/1Mbits", "log_tcp_complete")
-TCP_PERIODIC_TRACING_FILE_DESKTOP_1MBITS = os.path.join(os.getcwd(), "data/sky/tcp/desktop/1Mbits", "log_tcp_periodic")
-BOT_TRACING_FILE_DESKTOP_1MBITS = os.path.join(os.getcwd(), "data/sky/tcp/desktop/1Mbits", "streambot_trace.csv")
+TCP_COMPLETE_TRACING_FILE_DESKTOP_1MBITS = os.path.join(os.getcwd(), "data/sky/desktop/1Mbits", "log_tcp_complete")
+TCP_PERIODIC_TRACING_FILE_DESKTOP_1MBITS = os.path.join(os.getcwd(), "data/sky/desktop/1Mbits", "log_tcp_periodic")
+BOT_TRACING_FILE_DESKTOP_1MBITS = os.path.join(os.getcwd(), "data/sky/desktop/1Mbits", "streambot_trace.csv")
 
 
 def generate_frame(file: str, mapping: dict, delimiter: str) -> pandas.DataFrame:
@@ -92,9 +92,9 @@ def generate_tcp_periodic_frame(file: str, settings: dict) -> pandas.DataFrame:
     return generate_frame(mapping=settings["tstat"]["tcp"]["periodic"]["columns"], 
                           delimiter=" ", file=file)
 
-def reset_frame_timestamp(tcp: pandas.DataFrame, bot: pandas.DataFrame, column: str):
+def reset_frame_timestamp(frame: pandas.DataFrame, bot: pandas.DataFrame, column: str):
 
-    tcp[column] -= float(bot.loc[0, "event_absolute_unix_ms"])
+    frame[column] -= float(bot.loc[0, "event_absolute_unix_ms"])
 
 def process_tcp_periodic_frame(tcp_periodic: pandas.DataFrame, 
                                tcp_complete: pandas.DataFrame, bot: pandas.DataFrame) -> pandas.DataFrame:
@@ -424,22 +424,50 @@ def tcp_periodic_tokens_volume_distribution(mts: pandas.DataFrame,
                     f"Client Goodput: {server_app_goodput}<br>"
                     f"Server Goodput: {client_app_goodput}<br>")
 
+    def generate_color(record):
+
+        black  = "rgba(0, 0, 0, 0.6)"
+        red    = "rgba(255, 0, 0, 0.6)"
+        green  = "rgba(0, 255, 0, 0.6)"
+        purple = "rgba(128, 0, 128, 0.6)"  # Mixture
+
+        if record["server_app_xmitted_bytes"] > 0 and record["client_app_xmitted_bytes"] > 0:
+            return black
+        if record["server_app_xmitted_bytes"] > 0 and record["client_app_xmitted_bytes"] == 0:
+            return green
+        if record["client_app_xmitted_bytes"] > 0 and record["server_app_xmitted_bytes"] == 0:
+            return red
+        # if record["client_app_xmitted_bytes"] == 0 and record["server_app_xmitted_bytes"] == 0:
+        #     return black
+
     # Filter the frame for displaying only the requested token (use method copy()
     # for editing at free will the object in memory)
     copy = mts.loc[mts["token"] == token].copy()
 
     # Use .loc to avoid the SettingWithCopyWarning and create the 'index' column
-    copy.loc[:, "index"] = mts.apply(lambda x: f":{x['client_port']}:{x['server_port']} {x['token']}", axis=1)
+    copy.loc[:, "index"] = mts.apply(lambda record: f":{record['client_port']}:{record['server_port']} {record['token']}", axis=1)
 
     # Generate a description
-    copy["description"] = copy.apply(lambda x: generate_description(x), axis=1)
+    copy["description"] = copy.apply(lambda record: generate_description(record), axis=1)
+
+    # Generate a color by following this strategy: if the client and the server
+    # are talking each other, use green + red; if the client only, use the red
+    # if the server only, use the green.
+    copy["color"] = copy.apply(lambda record: generate_color(record), axis=1)
 
     fig = plotly.express.timeline(data_frame=copy,
                                     # Define the x-axis (the length of the segment)
                                     x_start="s_point_unix_dt", x_end="f_point_unix_dt", 
                                     # Define the y-axis (the height of the segment)
-                                    color="index", y="index",
+                                    color="color", 
+                                    y="index",
                                     title=title,
+                                    color_discrete_map={
+                                        "rgba(0, 0, 0, 0.6)":     "Black", 
+                                        "rgba(255, 0, 0, 0.6)":   "Red", 
+                                        "rgba(0, 255, 0, 0.6)":   "Green", 
+                                        "rgba(128, 0, 128, 0.6)": "Purple"
+                                    },
                                     custom_data=["description"])
     
     # Add a tiny flow description for each flow in the diagram bu updating
@@ -473,7 +501,7 @@ def tcp_periodic_tokens_volume_distribution(mts: pandas.DataFrame,
 
     return fig
 
-def tcp_periodic_tokens_volume_progression(metrics: pandas.DataFrame,
+def tcp_periodic_tokens_volume_progression(mts: pandas.DataFrame,
                                            bot: pandas.DataFrame, identity: str, title: str):
     
     pass
@@ -484,9 +512,9 @@ def process_tracing_data(bot_file, tcp_complete_file, tcp_periodic_file, setting
     tcp_complete_frame = generate_tcp_complete_frame(file=tcp_complete_file, settings=settings)
     tcp_periodic_frame = generate_tcp_periodic_frame(file=tcp_periodic_file, settings=settings)
 
-    reset_frame_timestamp(tcp=tcp_complete_frame, bot=bot_frame, column="fst_packet_observed_unix_ms")
-    reset_frame_timestamp(tcp=tcp_complete_frame, bot=bot_frame, column="lst_packet_observed_unix_ms")
-    reset_frame_timestamp(tcp=tcp_periodic_frame, bot=bot_frame, column="s_point_unix_ms")
+    reset_frame_timestamp(frame=tcp_complete_frame, bot=bot_frame, column="fst_packet_observed_unix_ms")
+    reset_frame_timestamp(frame=tcp_complete_frame, bot=bot_frame, column="lst_packet_observed_unix_ms")
+    reset_frame_timestamp(frame=tcp_periodic_frame, bot=bot_frame, column="s_point_unix_ms")
 
     tcp_periodic_frame = process_tcp_periodic_frame(tcp_complete=tcp_complete_frame, tcp_periodic=tcp_periodic_frame, bot=bot_frame)
     
@@ -502,6 +530,13 @@ def main():
         "moderatamente limitata":  (BOT_TRACING_FILE_DESKTOP_4MBITS,  TCP_COMPLETE_TRACING_FILE_DESKTOP_4MBITS,  TCP_PERIODIC_TRACING_FILE_DESKTOP_4MBITS),
         "estremamente limitata":   (BOT_TRACING_FILE_DESKTOP_1MBITS,  TCP_COMPLETE_TRACING_FILE_DESKTOP_1MBITS,  TCP_PERIODIC_TRACING_FILE_DESKTOP_1MBITS)
     }
+
+    # Print the homepage content
+    with open(os.path.join(os.getcwd(), "htmls", "sky_over_tcp.html"), "r") as f:
+        homepage_content = f.read()  
+    
+    streamlit.markdown(homepage_content, unsafe_allow_html=True)
+
 
     scenarios = {}
     for scenario, files in mappings.items():
@@ -537,8 +572,8 @@ def main():
                                                                        title=title))
         streamlit.markdown("---")
 
-    streamlit.markdown("# Analisi del comportamento SKY al livello UDP")
+    streamlit.markdown("## Analisi del comportamento SKY al livello UDP")
     streamlit.markdown("---")
-    streamlit.markdown("# Analisi del comportamento SKY al livello QUIC")
+    streamlit.markdown("## Analisi del comportamento SKY al livello QUIC")
 
 main()
