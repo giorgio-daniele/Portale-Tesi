@@ -1,0 +1,321 @@
+<div style="text-align: justify;">
+    <h1>Introduzione</h1>
+    <p>
+        Questo portale raccoglie i risultati degli esperimenti e delle procedure applicate per il riconoscimento di
+        intervalli di visualizzazione di contenuti multimediali
+        per le principali piattaforme di streaming italiane: Sky e DAZN. L'obiettivo finale è lo sviluppo e
+        l'ingegnerizzazione di software capace di estrapolare da tracciati
+        <a href="http://tstat.polito.it/" target="_blank">Tstat</a>
+        documenti di testo che raccolgono, in formato di
+        sessione TCP oppure UDP, il traffico scambiato tra client
+        a partire da una traccia (ad esempio Wireshark). Una volta individuati gli intervalli di visualizzazione, il
+        software applica metriche oggettive per stimare la qualità
+        del servizio, ovvero una misura di probabilità che permette di capire se l'utente ha visualizzato nel migliore
+        dei modi il contenuto multimediale. Eventi come il
+        <em>re-buffering</em>
+        oppure lo
+        <em>stuttering</em>
+        possono,
+        infatti, compromettere in modo sensibile la QoE.
+    </p>
+    <h2> 1.2 Background</h2>
+    <p>
+        Il trasferimento dati che avviene durante la riproduzione di un contenuto multimediale richiede un
+        protocollo applicativo che sia capace di intercettare un requisito fondamentale: il client deve
+        poter richiedere al suo server i frammenti audio e/o video necessari alla corretta riproduzione del
+        film oppure dell'evento sportivo desiderato dall'utente. I maggiori fornitori di servizi streaming
+        non hanno interesse nella formulazione di un protocollo applicativo
+        <em>ad hoc</em>
+        per la consegna
+        dei loro palinsesti, sicchè il paradigma HTTP over TCP rappresenta una scelta valida, facile, veloce,
+        ben collaudata, intrisecamente cross-platform, che risponde alle esigenze di distribuire contenuti
+        su scala geografica. Questo implica che il dialogo tra un client e un server Sky oppure DAZN durante
+        il ciclo di vita dell'applicazione che l'utente utilizza (un'applicazione dedicata oppure un browser)
+        si tramuta in un mucchio di transazioni HTTP all'interno di canali TCP e/o UDP (QUIC).
+        La nostra analisi deve utilizzare solo ed esclusivamente informazioni aggregate, principalmente per
+        ragioni di privacy. Non è possibile ispezionare ed indagare il singolo pacchetto: tutti i procedimenti
+        di
+        <em>deep inspection</em>
+        , una volta molto comuni per la classificazione del traffico, risultano oggi
+        inadeguati a causa del capillare utilizzo della cifratura del traffico Internet; tuttavia, per i nostri
+        scopi, anche se non esistesse il limite della cifratura, l'analisi pacchetto-per-pacchetto risulterebbe
+        estramamente poco agile, perchè fattibile solo su modeste quantità di dati al secondo. Per queste
+        ragioni, il procedimento sviluppato deve operare sui flussi TCP e/o UDP e non deve utilizzare parametri
+        che possono variare nel tempo (indirizzi IPv4 oppure IPv6, numeri di porta). Per soddisfare i precedenti
+        requisiti funzionali, occorre partire da un'ipotesi:
+        <em>
+            per ciascuna piattaforma di streaming deve esistere
+        un sottoinsieme di domini Internet (vedi più avanti il significato di Fully Qualified Domain Name) che
+        sono unicamente associati all'identità del fornitore di server e che con i quali il clien scambia dati
+        durante la riproduzione di un contenuto multimediale; in particolare, tra i Fully Qualified Domain Name
+        comunemente osservati, durante la riproduzione di un contenuto multimediale deve esistere quello dai quale
+        il clien scarica i frammenti audio e/o video, ossia quello sul quale è desiderabile applicare delle
+        misure per valutare la bontà dell'esperienza utente.
+        </em>
+        <br>
+        <br>
+    </p>
+    <h3> 1.2.1 Esperimenti Supervisionati</h3>
+    <p>
+        Per confermare la nostra ipotesi, occorre generare un numero ragionevole di campioni di visualizzazioni. Solo
+        dopo, sarà possibile generare qualsivoglia procedura che
+        sfrutti le ricorrenze o i pattern nascosti in ogni intervallo di visualizzazione. Per raggiungere questo scopo,
+        abbiamo preparato un sistema intelligente (Streambot) per
+        automatizzare la riproduzione di contenuti multimediali per le piattaforme Sky e DAZN. Streambot è un software
+        Python che permette di gestire in modo automatico la visita
+        dei principali canali sportivi e di intrattenimento, informandoci, evento dopo evento, quando un intervallo di
+        visualizzazione è iniziato e quando è stato chiuso. Tutti i
+        campioni collezionati in questo modo costituiscono un insieme di
+        <strong>esperimenti controllati</strong>
+        (o
+        <strong>esperimenti supervisionati</strong>
+        ). Ogni esperimeto
+        è pertanto un processo Streambot in esecuzione nel sistema.
+    </p>
+    <p>
+        Le attività svolte da Streambot sono:
+        <ul>
+            <li>avviare una sessione di cattura Wireshark;</li>
+            <li>
+                avviare il client specifico per quella piattaforma, come un semplice Browser oppure un'applicazione
+            pre-installata;
+            </li>
+            <li>raggiungere la schermata dalla quale un utente sceglierebbe il contenuto da visualizzare;</li>
+            <li>
+                visualizzare uno dei contenuti disponibili, per un intervallo di tempo compreso tra
+                <em>40 secondi</em>
+                e
+                <em>60 secondi</em>
+                ;
+            </li>
+            <li>
+                chiudere la visualizzazione e tornare al punto precedente, richiedendo la visualizzazione di un nuovo
+            contenuto;
+            </li>
+        </ul>
+        <p>
+            <p>
+                Alla fine di ogni esperimento, abbiamo: una traccia Wireshark che ha registrato tutto il ciclo di vita del
+        client
+        dal punto di vista della sua interazione con la rete
+        Internet; una traccia Streambot che ci aiuta ad isolare le finestre di tempo durante le quali era attiva una
+        visualizzazione sul client. La nostra analisi però non prevede
+        l'ispezione delle tracce Wireshark (sia perchè non sarebbe praticabile su vasta scala sia perchè la maggior
+        parte del traffico è ormai protetto da TLS, quindi completamente
+        inaccessibile). Per questo motivo, ci concentreremo, come annunciato in precedenza, sui domini che contattati
+        dal client sia attraverso scambi orientati alla connessione
+        (protocollo TCP) che in datagrammi (protocollo UDP).
+            </p>
+            <h3> 1.2.2 Tstat</h3>
+            <p>
+                Tstat crea un insieme di documento di testo con estensione
+                <em>.txt</em>
+                dove ogni riga corrisponde a un flusso
+        diverso e ogni colonna è associata a una misurazione specifica.
+        Quando utile, le colonne sono raggruppate secondo le direzioni del traffico C2S - Client-to-Server e S2C -
+        Server-to-Client. Per la maggior parte dei tracciati, la prima riga
+        contiene un riepilogo con la descrizione di tutte le colonne. I tracciati di interesse sono i seguenti:
+                <br>
+                <ul>
+                    <li>
+                        <code>log_tcp_nocomplete</code>
+                        ,
+                        <code>log_tcp_nocomplete</code>
+                        : riportano ogni connessione TCP tracciata
+            da Tstat. Ogni connessione è identificata a partire dal primo
+            segmento che contiene il bit SYN al valore alto e termine quando si verificano uno dei seguenti eventi: una
+            delle due parti emette un segmento che contiene i bit FIN/ACK al
+            valore alto; una delle due parti emette un segmento che contiene i bit RST al valore alto; nessun segmento è
+            stato ricevuto per un intervallo pari ad un valore predefinito
+            (eventualmente modificabile) di 5 minuti dall'ultimo segmento noto. Se la procedura di three-way handshake
+            non è stata correttamente visto, la connessione viene scartata.
+            Successivamente, se una connessione viene chiusa correttamente, viene archiviata in
+                        <code>log_tcp_complete</code>
+                        , altrimenti in
+                        <code>log_tcp_nocomplete</code>
+                        ;
+                    </li>
+                    <li>
+                        <code>log_udp_complete</code>
+                        : riporta ogni coppia di flussi UDP tracciata da Tstat; sebbene il termine
+                        <em>flusso</em>
+                        sia improprio, un
+                        <em>flusso UDP</em>
+                        è uno
+            scambio dati per mezzo di datagrammi tra una coppia di socket UDP, ossia una coppia di indirizzi IP e una
+            coppia di numeri di porta che scambiano datagrammi, sicchè la
+            misurazione dello scambio dati avviene a partire dal primo datagramma osservato tra la coppia e termina
+            quando si esaurisce (da entrambi le parti) l'intevallo temporale di
+            attesa, similmente a quanto accade per una connessione TCP. E' bene ricordare che, visto che UDP non è un
+            protocollo orientato alla connessione, non è possibile distinguere
+            con ragionevole certezza il caso di due macchine che hanno terminato fisicamente lo scambio di datagrammi
+            UDP dal caso in cui (causa ritardi di rete o periodi di silenzio)
+            lo scambio dati risulta effettivamente terminato;
+                    </li>
+                    <li>
+                        <code>log_periodic_complete</code>
+                        :riporta l'evoluzione dei flussi TCP (quelli contenuti nel tracciato
+                        <code>log_tcp_complete</code>
+                        ) ad intervalli di tempo su scala
+            logaritmica. Questo contiene grossomodo le stesse informazioni contenute nel tracciato
+                        <code>log_tcp_complete</code>
+                        ; tuttavia, il suo scopo è quello di aiutare il calcolo
+            di statistiche sulla qualità, il rendimento e la capacità del flusso con il trascorrere del tempo.
+                    </li>
+                </ul>
+            </p>
+            <h1> 2 Intervalli di visualizzazione</h1>
+            <p>
+                L'utilizzo di Streambot per la riproduzione di contenuti multimediali è fondamentale per conoscere con esatezza
+        quando una visualizzazione è stata iniziata e quando è stata chiusa. Per
+        questo motivo, Streambot asserve alla funzione di
+                <strong>oracolo</strong>
+                . Grazie al tracciato Streambot
+        ottenuto al termine di ogni esperimento, siamo in grado di isolare con precisione
+        l'intervallo di tempo durante il quale ha avuto corso una visualizzazione. Ogni intervallo è pertanto definito
+        come
+                <strong>intervallo di visualizzazione</strong>
+                . In Figura 1.2, è stato
+        riportato un esempio di un intervallo di visualizzazione. Ogni intervallo di visualizzazione è un contenitore di
+        flussi (TCP oppure UDP) e che, secondo la nostra ipotesi, sono ricorrenti.
+        A questo punto, per ciascun intervallo di visualizzazione, è sufficiente isolare nei tracciati Tstat per i quali
+        il flusso ha avuto inizio nell'intervallo
+                <em>[ts; te]</em>
+                , con
+                <em>ts</em>
+                pari all'istante di inizio dell'interavallo e
+                <em>te</em>
+                quello di fine. Ogni flusso all'interno
+        dell'intervallo dovrà essere identificato in modo tale che sia semplice il suo riconiscmento
+        tra tutti gli altri e, come anticipato prima in questo documento, ci concentremo sull'identità del server con il
+        quale il client intrattiene uno scambio dati al livello quattro della pila
+        ISO/OSI.
+            </p>
+            <h2> 2.1 Server Token</h2>
+            <p>
+                Un
+                <strong>Fully Qualified Domain Name</strong>
+                (FQDN) è il nome di dominio completo per un computer o un host
+        specifico su Internet. L'FQDN è composto da due parti: il nome dell'host e
+        il nome. Ciascuna stringa di testo è pertanto costituita da una serie di sottostringhe, ciascuna separata da un
+        punto, che rappresentano i vari livelli della gerarchia del sistema dei nomi
+        di dominio (DNS). La struttura di un FQDN è la seguente:
+                <ul>
+                    <li>
+                        <strong>Hostname:</strong>
+                        Il nome specifico di un dispositivo o servizio all'interno di un dominio. Ad
+            esempio,
+                        <code>"www"</code>
+                        in
+                        <code>"www.example.com"</code>
+                        ;
+                    </li>
+                    <li>
+                        <strong>Second Level Domain (SLD):</strong>
+                        Il nome del dominio principale registrato. Ad esempio,
+                        <code>"example"</code>
+                        in
+                        <code>"www.example.com"</code>
+                        ;
+                    </li>
+                    <li>
+                        <strong>Top Level Domain (TLD):</strong>
+                        La parte finale del dominio, che identifica la categoria di dominio
+            o il paese. Ad esempio,
+                        <code>"com"</code>
+                        in
+                        <code>"www.example.com"</code>
+                        .
+                    </li>
+                </ul>
+                Se è vero che ogni Fully Qualified Domain Name è una stringa che specifica esattamente un computer o un host
+    specifico su Internet, è altrettando vero che non è di nostro interesse
+    costruire un sistema che riconosca specificatamente un dato computer (cosa che equivarrebbe ad utilizzare il suo
+    indirizzo IP), ma, al contario, di riconoscere tutte le macchine che sono
+    associate, ad esempio, alla distribuzione dei contenuti multimediali all'interno dell'infrastruttura del fornitore
+    di servizi oppure quelle deputate alla gestione della negoziozione dell'
+    accesso a questa o quella CDN (se il fornitore, come spesso accade, ne fa uso). In pratica, vorremmo raggruppare
+    tutti i possibili server ai quali il client può collegarsi durante un
+    intervallo di visualizzazione. Per questo scopo, serve un
+                <b>token</b>
+                , una stringa di testo che identifichi una
+    classe di server con i quali client scambia dati durante la visualizzazione
+    di un contenuto multimediale. La costruzione è per la verità molto semplice: è sufficiente rimuovere l'hostname e
+    rimpizziare tutti gli eventuali valori numeri contenuti nei domini intermedi
+    con un simbolo jolly, come ad esempio un
+                <code>#</code>
+                .
+            </p>
+            <h2> 2.2 Estrazione intervalli di visualizzazione in TCP</h2>
+            <p>
+                L'algoritmo per l'estrezione degli intervalli di visualizzazione è semplice ed intuitivo: presa la coppia
+        costituita dal tracciato Tstat
+                <code>log_tcp_nocomplete</code>
+                e quello relativo
+        all'esecuzione di Streambot (Tstat
+                <code>smbot_log_trace_file</code>
+                ), si isolano gli intervalli di
+        visualizzazione comandati nel tempo da Streambot; per ogni intervallo costruito, si catturano
+        tutti i flussi TCP che hanno avuto inizio nell'intervallo di visualizzazione, ossia quelli per i quali Tstat ha
+        rilevato il transito del primo pacchetto entro l'intervallo
+                <em>[ts; te]</em>
+                ,
+        con
+                <em>ts</em>
+                inizio dell'intervallo e
+                <em>te</em>
+                in fine dell'intervallo. Successivamente, per ogni flusso
+        così isolato, si converte l'identità del server (il suo nome canonico, quello
+        contenuto nel certificato digitale e visibile nella procedura di TLS hand-shake, se la sessione è protetta dal
+        TLS; oppure, al contrario, direttamente il suo Fully Qualified Domain Name,
+        se la sessione è chiaro).
+            </p>
+            <h3> 2.2.1 Generazione dei campioni</h3>
+            <p>
+                Ogni intervallo di visualizzazione precendetemente sintetizzato è un oggetto con le segueti proprietà:
+                <ul>
+                    <li>
+                        l'istante di tempo di inizio del flusso più vicino all'istante di inizio dell'intervallo, ossia
+                        <em>ts</em>
+                        ;
+                    </li>
+                    <li>
+                        l'istante di tempo di fine del flusso più vicino all'istante di fine dell'intervallo, ossia
+                        <em>te</em>
+                        ;
+                    </li>
+                    <li>
+                        la lista completa di tutti i flussi isolati;
+                        <li>
+                            la lista dei token associati ai server con i quali il client ha intrattenuto uno scambio dati
+            nell'intervallo di visualizzazione;
+                        </li>
+                    </ul>
+                    Da ogni intervallo di visualizzazione, si estrae la lista dei token e si costruisce un
+                    <b>campione</b>
+                    di flussi,
+    cioè un documento di testo conservato su disco. Ogni campione è una fotografia
+    di un intervallo di visualizzazione che, con pochissimi byte di occupazione, contiene tutto il materiale necessario
+    per la costruzione di un modello per il riconoscimento di un intervallo di
+    visualizzazione in un ambiente non supervisionato.
+                </p>
+                <h3> 2.3 Frequenza dei token</h3>
+                <p>
+                    Il
+                    <b>calcolo della frequenza</b>
+                    delle parole in un corpus di documenti è una procedura fondamentale
+        nell'analisi del testo, la quale consente di far emergere i temi ricorrenti o i gruppi
+        di parole che più spesso compaino all'interno dello stessa frase. Abbiamo utilizzato questa strategia per
+        generare il profilo delle probabilità dei token trovati nel corpus di documenti
+        costruito al passo precedente. A differenza della procedura standard, la quale prevede di svolgere attività
+        preliminiari di rimozione della punteggiature, conversione del testo in minuscolo,
+        eliminazione delle parole cosìdette non rilevanti (
+                    <em>stopwords</em>
+                    ), abbiamo direttamente calcoloato si le
+        occorrenze in un dizionario. La procedura è stata svolta tenendo conto del fatto
+        che i campioni possono contenere token diversi in relazione al dispositivo utilizzato (se mobile o desktop) e
+        che stessi token possono manifestarsi con probabilità differenti. Per questo
+        motivo, abbiamo separato l'analisi dei campioni generati a partire da intervalli di visualizzazione ottenuti al
+        mobile da quelli ottenuti al desktop.
+                </p>
+            </div>
