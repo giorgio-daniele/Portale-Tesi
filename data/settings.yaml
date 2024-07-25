@@ -26,14 +26,14 @@ platform:
 
 tstat:
   tcp:
-    complete:
+    log_tcp_complete:
       columns:
         # Client related stuff
-        c_ip:         "client_ip"                      # Which IP address the client is listening at
-        c_port:       "client_port"                    # Which TCP port the client is listening at
-        c_pkts_all:   "client_all_xmitted_pkts"        # How many packets the client sent
-        c_rst_cnt:    "client_rst_xmitted_pkts"        # How many [RST] packets the client sent
-        c_ack_cnt:    "client_ack_xmitted_pkts"        # How many [ACK + DATA] packets the client sent (piggybacking)
+        c_ip:         "c_ip"              # Which IP address the client is listening at
+        c_port:       "c_pt"              # Which TCP port the client is listening at
+        c_pkts_all:   "c_all_pkts"        # How many packets the client sent
+        c_rst_cnt:    "c_rst_pkts"        # How many [RST] packets the client sent
+        c_ack_cnt:    "c_ack_pkts"        # How many [ACK + DATA] packets the client sent (piggybacking)
         c_ack_cnt_p:  "client_ack_xmitted_pkts_nodata" # How many [ACK + NO DATA] packets the client sent (no piggybacking)
         c_bytes_uniq: "client_app_xmitted_bytes"       # How many [DATA] bytes the client sent (excluding retransmissions)
         c_pkts_data:  "client_app_xmitted_pkts"        # How many [DATA] packets the client sent
@@ -74,7 +74,7 @@ tstat:
         c_tls_SNI:      "sni_client_hello" # SNI fetched from ClientHello while performing TLS handshake
         s_tls_SCN:      "sni_server_hello" # SNI fetched from ServerHello while performing TLS handshake
         http_hostname:  "web_server_name"  # Hostaname (i.e. the server identity)
-    periodic:
+    log_tcp_periodic:
       columns:
         # Client related stuff
         c_ip:           "client_ip"                      # Which IP address the client is listening at
@@ -109,7 +109,7 @@ tstat:
         # Timestamps related stuff
         time_abs_start: "s_point_unix_ms"
         bin_duration:   "duration"
-  udp:
+  log_udp_complete:
     complete:
       columns:
     periodic:
