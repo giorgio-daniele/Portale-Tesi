@@ -372,27 +372,43 @@ def log_tcp_periodic_series(session_id: str):
     return figure
 
 
+with open(os.path.join(os.getcwd(), "htmls", "tcp_complete_tokens_desc.html"), "r") as f:
+    tokens_desc = f.read()  
+
 streamlit.markdown("# Traffico applicativo al livello TCP")
 streamlit.markdown("---")
 streamlit.markdown("### Distribuzione dei token al livello TCP")
-token = streamlit.selectbox("Seleziona qui il token da filtrare", 
-                            list(set(tcp_complete["token"])))
+streamlit.markdown(tokens_desc, unsafe_allow_html=True)
+
+token = streamlit.selectbox("Seleziona qui il token da filtrare", list(set(tcp_complete["token"])))
+
+streamlit.markdown(f"### Analisi completa dei flussi di _{token}_")
 streamlit.plotly_chart(log_tcp_complete_timeline(feature=None, token=token))
-# streamlit.plotly_chart(log_tcp_complete_timeline(feature=None, token=None))
+
+streamlit.markdown(f"### Analisi periodica dei flussi di _{token}_")
+streamlit.plotly_chart(log_tcp_periodic_timeline(token=token))
+
+streamlit.markdown(f"### Analisi completa di uno dei flussi con token _{token}_")
+session_id = streamlit.selectbox("Seleziona qui il flusso specifico", list(set(tcp_periodic.loc[tcp_periodic["token"] == token]["session_id"])))
+streamlit.plotly_chart(log_tcp_periodic_series(session_id=session_id))
+
+with open(os.path.join(os.getcwd(), "htmls", "tcp_complete_tokens_desc.html"), "r") as f:
+    volumes_desc = f.read()  
+
+streamlit.markdown("# Volumi applicativi al livello TCP")
+streamlit.markdown("---")
+streamlit.markdown(volumes_desc, unsafe_allow_html=True)
 streamlit.markdown("### Volumi in download dei flussi al livello TCP")
 streamlit.plotly_chart(log_tcp_complete_timeline(feature="s_app_byts", token=None))
 streamlit.markdown("### Volumi in upload dei flussi al livello TCP")
 streamlit.plotly_chart(log_tcp_complete_timeline(feature="c_app_byts", token=None))
-streamlit.markdown("### Evoluzione periodica dei flussi al livello TCP")
-streamlit.plotly_chart(log_tcp_periodic_timeline(token=token))
 
-streamlit.markdown("### Evoluzione periodica di un flusso TCP")
-session_id = streamlit.selectbox("Seleziona qui il flusso da analizzare nel dettaglio", 
-                            list(set(tcp_periodic.loc[tcp_periodic["token"] == token]["session_id"])))
-streamlit.plotly_chart(log_tcp_periodic_series(session_id=session_id))
+with open(os.path.join(os.getcwd(), "htmls", "udp_complete_tokens_desc.html"), "r") as f:
+    volumes_desc = f.read()
 
 streamlit.markdown("# Traffico applicativo al livello UDP")
 streamlit.markdown("---")
+streamlit.markdown(volumes_desc, unsafe_allow_html=True)
 streamlit.markdown("### Distribuzione dei token al livello UDP (dal client verso il server)")
 streamlit.plotly_chart(log_udp_complete_timeline(feature=None, token=token, side="client"))
 streamlit.markdown("### Distribuzione dei token al livello UDP (dal server verso il client)")
