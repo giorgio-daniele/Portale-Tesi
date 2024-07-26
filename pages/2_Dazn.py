@@ -372,22 +372,30 @@ def log_tcp_periodic_series(session_id: str):
     return figure
 
 
-streamlit.markdown("## Data traffic over TCP")
+streamlit.markdown("# Traffico applicativo al livello TCP")
+streamlit.markdown("---")
+streamlit.markdown("### Distribuzione dei token al livello TCP")
 token = streamlit.selectbox("Seleziona qui il token da filtrare", 
                             list(set(tcp_complete["token"])))
-
 streamlit.plotly_chart(log_tcp_complete_timeline(feature=None, token=token))
 # streamlit.plotly_chart(log_tcp_complete_timeline(feature=None, token=None))
+streamlit.markdown("### Volumi in download dei flussi al livello TCP")
 streamlit.plotly_chart(log_tcp_complete_timeline(feature="s_app_byts", token=None))
+streamlit.markdown("### Volumi in upload dei flussi al livello TCP")
 streamlit.plotly_chart(log_tcp_complete_timeline(feature="c_app_byts", token=None))
+streamlit.markdown("### Evoluzione periodica dei flussi al livello TCP")
 streamlit.plotly_chart(log_tcp_periodic_timeline(token=token))
 
+streamlit.markdown("### Evoluzione periodica di un flusso TCP")
 session_id = streamlit.selectbox("Seleziona qui il flusso da analizzare nel dettaglio", 
                             list(set(tcp_periodic.loc[tcp_periodic["token"] == token]["session_id"])))
 streamlit.plotly_chart(log_tcp_periodic_series(session_id=session_id))
 
-streamlit.markdown("## Data traffic over UDP")
+streamlit.markdown("# Traffico applicativo al livello UDP")
+streamlit.markdown("---")
+streamlit.markdown("### Distribuzione dei token al livello UDP (dal client verso il server)")
 streamlit.plotly_chart(log_udp_complete_timeline(feature=None, token=token, side="client"))
+streamlit.markdown("### Distribuzione dei token al livello UDP (dal server verso il client)")
 streamlit.plotly_chart(log_udp_complete_timeline(feature=None, token=token, side="server"))
 
 
