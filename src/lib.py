@@ -18,7 +18,7 @@ def log_tcp_complete_description(record: dict) -> str:
     dwload = record["dwload"]
     upload = record["upload"]
 
-    return (f"Token: <b>{record['token']}</b><br>"
+    return (f"Token: <b>{record['stoken']}</b><br>"
             f"Client IP: {record['c_ip']}<br>"
             f"Server IP: {record['s_ip']}<br>"
             f"Client Port: {record['c_pt']}<br>"
@@ -49,7 +49,7 @@ def log_tcp_periodic_description(record: dict) -> str:
     dwload = record["dwload"]
     upload = record["upload"]
 
-    return (f"Token: <b>{record['token']}</b><br>"
+    return (f"Token: <b>{record['stoken']}</b><br>"
             f"Client IP: {record['c_ip']}<br>"
             f"Server IP: {record['s_ip']}<br>"
             f"Client Port: {record['c_pt']}<br>"
@@ -80,7 +80,7 @@ def log_udp_complete_description(record: dict, side: str) -> str:
     dwload = record["dwload"]
     upload = record["upload"]
 
-    return (f"Token: <b>{record['token']}</b><br>"
+    return (f"Token: <b>{record['stoken']}</b><br>"
             f"Started  [sec]: {ts_seconds:4.2f}<br>"
             f"Finished [sec]: {te_seconds:4.2f}<br>"
             f"TCP Stream Duration: {sz_minutes}<br>"
@@ -111,7 +111,7 @@ def log_tcp_complete_timeline(tcp_complete: pandas.DataFrame,
     # token
     if not feature and token:
         low, high  = "rgba(0, 0, 255, 0.2)", "rgba(0, 0, 255, 1.0)"
-        tcp_complete["color"] = tcp_complete["token"].apply(lambda x: high if x == token else low)
+        tcp_complete["color"] = tcp_complete["stoken"].apply(lambda x: high if x == token else low)
         figure = plotly.express.timeline(data_frame=tcp_complete,
                                          x_start="date_ts", x_end="date_te", y=tcp_complete.index, color="color",
                                          custom_data=["description"],
@@ -135,7 +135,7 @@ def log_tcp_complete_timeline(tcp_complete: pandas.DataFrame,
     # corresponding to the instant when that event occurred
     n = len(tcp_complete)
     for _, record in bot_complete.iterrows():
-        x0 = pandas.to_datetime(record["from_origin_ms"], unit="ms", origin="unix")
+        x0 = pandas.to_datetime(record["from_origin_ts"], unit="ms", origin="unix")
 
         # Dotted line
         figure.add_shape(dict(type="line", 
@@ -145,19 +145,19 @@ def log_tcp_complete_timeline(tcp_complete: pandas.DataFrame,
 
         # Annotation at the top
         figure.add_annotation(x=x0, y=n - 1, yref="y",
-                            text=record["event"],
+                            text=record["action"],
                             showarrow=True,
                             arrowhead=2, ax=0, ay=-40)
 
         # Annotation at the bottom
         figure.add_annotation(x=x0, y=0, yref="y",
-                            text=record["event"],
+                            text=record["action"],
                             showarrow=True,
                             arrowhead=2, ax=0, ay=40)
     
     # Define the x-axis interval
-    xs = pandas.to_datetime(bot_complete["from_origin_ms"].min(), unit="ms", origin="unix")
-    xe = pandas.to_datetime(bot_complete["from_origin_ms"].max(), unit="ms", origin="unix")
+    xs = pandas.to_datetime(bot_complete["from_origin_ts"].min(), unit="ms", origin="unix")
+    xe = pandas.to_datetime(bot_complete["from_origin_ts"].max(), unit="ms", origin="unix")
 
     # Define the x-axis range
     values = pandas.date_range(start=xs, end=xe, freq="20s")
@@ -187,7 +187,7 @@ def log_tcp_periodic_timeline(tcp_periodic: pandas.DataFrame,
     
     # From the original DataFrame genearate a copy containing all flows whose token
     # is the one requested by the user
-    selects = tcp_periodic.loc[tcp_periodic["token"] == token].copy()
+    selects = tcp_periodic.loc[tcp_periodic["stoken"] == token].copy()
 
     # Add the description to each flow if it does not exist yet
     # When rendering more than once the chart, the description
@@ -208,7 +208,7 @@ def log_tcp_periodic_timeline(tcp_periodic: pandas.DataFrame,
 
     n = len(selects["session_id"])
     for _, record in bot_complete.iterrows():
-        x0 = pandas.to_datetime(record["from_origin_ms"], unit="ms", origin="unix")
+        x0 = pandas.to_datetime(record["from_origin_ts"], unit="ms", origin="unix")
 
         # Dotted line spanning the whole y-axis
         figure.add_shape(type="line", 
@@ -220,13 +220,13 @@ def log_tcp_periodic_timeline(tcp_periodic: pandas.DataFrame,
         # Annotations
         for y, ay in [(1, -40), (0, 40)]:
             figure.add_annotation(x=x0, y=y, yref="paper",
-                                text=record["event"],
+                                text=record["action"],
                                 showarrow=True,
                                 arrowhead=2, ax=0, ay=ay)
     
     # Define the x-axis interval
-    xs = pandas.to_datetime(bot_complete["from_origin_ms"].min(), unit="ms", origin="unix")
-    xe = pandas.to_datetime(bot_complete["from_origin_ms"].max(), unit="ms", origin="unix")
+    xs = pandas.to_datetime(bot_complete["from_origin_ts"].min(), unit="ms", origin="unix")
+    xe = pandas.to_datetime(bot_complete["from_origin_ts"].max(), unit="ms", origin="unix")
 
     # Define the x-axis range
     values = pandas.date_range(start=xs, end=xe, freq="20s")

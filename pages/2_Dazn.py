@@ -30,7 +30,7 @@ def tcp_chapter():
     streamlit.markdown("### Distribuzione dei token al livello TCP")
     streamlit.markdown(tcp_complete_description, unsafe_allow_html=True)
 
-    options = list(set(tcp_complete["token"]))
+    options = list(set(tcp_complete["stoken"]))
     token = streamlit.selectbox("Seleziona qui il token da filtrare", options)
 
     streamlit.markdown(f"### Analisi completa dei flussi di _{token}_")
