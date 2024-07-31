@@ -5,43 +5,81 @@ import plotly.graph_objects
 
 def tcp_description(record: dict) -> str:
 
-    ts_milliseconds = record["unix_ts_millis"]
-    te_milliseconds = record["unix_te_millis"]
+    #####################################################
+    # Application level information
+    #####################################################
+    app_proto = record["app_proto"]
 
-    ts_seconds = ts_milliseconds // 1000
-    te_seconds = te_milliseconds // 1000
+    #####################################################
+    # Socket level information
+    #####################################################
+    c_ip = record["c_ip"]
+    s_ip = record["s_ip"]
+    c_pt = record["c_pt"]
+    s_pt = record["s_pt"]
+    s_tk = record["app_token"]
 
-    duration_milliseconds = te_milliseconds - ts_milliseconds
-    duration_seconds = duration_milliseconds // 1000
-    duration_minutes = duration_seconds // 60
+    #####################################################
+    # Timings
+    #####################################################
+    ts = record["unix_ts_millis"]
+    te = record["unix_te_millis"]
+
+    ts_secnds = ts // 1000
+    te_secnds = te // 1000
+
+    ts_minuts = ts_secnds // 60
+    te_minuts = te_secnds // 60
     
-    client_volume = record["c_app_volume"]
-    server_volume = record["s_app_volume"]
+    millis_span = te - ts
+    secnds_span = te_secnds - ts_secnds
+    minuts_span = te_minuts - ts_minuts
 
-    server_rate = record["s_app_rate_kbits"]
-    client_rate = record["c_app_rate_kbits"]
+    #####################################################
+    # Volumes
+    #####################################################
+    c_app_btes = record["c_app_volume"]
+    s_app_btes = record["s_app_volume"]
 
-    application_token = record["app_token"]
-    application_proto = record["app_proto"]
+    c_app_pkts = record["c_app_pkts"]
+    s_app_pkts = record["s_app_pkts"]
 
-    return (f"Token: <b>{application_token}</b><br>"
-            f"Client IP: {record['c_ip']}<br>"
-            f"Server IP: {record['s_ip']}<br>"
-            f"Client Port: {record['c_pt']}<br>"
-            f"Server Port: {record['s_pt']}<br>"
-            f"Started  [milliseconds]: {ts_milliseconds:4.2f}<br>"
-            f"Finished [milliseconds]: {te_milliseconds:4.2f}<br>"
-            f"Started  [seconds]: {ts_seconds:4.2f}<br>"
-            f"Finished [seconds]: {te_seconds:4.2f}<br>"
-            f"Duration [milliseconds]: {duration_milliseconds:4.2f}<br>"
-            f"Duration [seconds]: {duration_seconds:4.2f}<br>"
-            f"Duration [minutes]: {duration_minutes:4.2f}<br>"
-            f"Client Application Rate: {client_rate}<br>"
-            f"Server Application Rate: {server_rate}<br>"
-            f"Client Application Data: {client_volume}<br>"
-            f"Server Application Data: {server_volume}<br>"
-            f"Application Protocol: {application_proto}")
+    c_ack_pkts = record["c_ack_pkts"]
+    s_ack_pkts = record["s_ack_pkts"]
 
+    c_pure_ack_pkts = record["c_pure_ack_pkts"]
+    s_pure_ack_pkts = record["s_pure_ack_pkts"]
+
+    #####################################################
+    # Volumes
+    #####################################################
+    c_app_rate = record["c_app_rate_kbits"]
+    s_app_rate = record["s_app_rate_kbits"]
+
+    return (
+        f"--------------------------------------- <br>"
+        f"<b> Client Related Socket Info </b> <br>"
+        f"IP: {c_ip} PT: {c_pt} <br>"
+        f"--------------------------------------- <br>"
+        f"<b> Server Related Socket Info </b>  <br>"
+        f"IP: {s_ip} PT: {s_pt} <br>"
+        f"--------------------------------------- <br>"
+        f"<b> Client Volume Related Info </b> <br>"
+        f"--------------------------------------- <br>"
+        f"Bytes / Packets:   {c_app_btes} / {c_app_pkts}</b><br>"
+        f"Pure ACKs / ACKs:  {c_pure_ack_pkts} / {c_ack_pkts}<br>"
+        f"--------------------------------------- <br>"
+        f"<b> Server Volume Related Info </b> <br>"
+        f"--------------------------------------- <br>"
+        f"Bytes / Packets:   {s_app_btes} / {s_app_pkts}</b><br>"
+        f"Pure ACKs / ACKs:  {s_pure_ack_pkts} / {s_ack_pkts}<br>"
+        f"--------------------------------------- <br>"
+        f"<b> Timing Information </b> <br>"
+        f"Interval [milliseconds]: [{ts:2.2f}; {te:2.2f}]<br>"
+        f"Interval [seconds]: [{ts_secnds:2.2f}; {te_secnds:2.2f}]<br>"
+        f"Span [milliseconds]: {millis_span:4.2f}   <br>"
+        f"Span [seconds]: {secnds_span:4.2f}  <br>"
+        f"Span [minutes]: {minuts_span:4.2f}  <br>")
 
 def log_tcp_complete_timeline(tcp_complete: pandas.DataFrame,
                               bot_complete: pandas.DataFrame, feature: str | None, token: str | None):
