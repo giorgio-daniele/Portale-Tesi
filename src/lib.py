@@ -1,7 +1,8 @@
-import os
 import pandas
+import numpy
 import plotly.express
 import plotly.graph_objects
+
 
 def tcp_description(record: dict) -> str:
 
@@ -9,6 +10,7 @@ def tcp_description(record: dict) -> str:
     # Application level information
     #####################################################
     app_proto = record["app_proto"]
+    app_token = record["app_token"]
 
     #####################################################
     # Socket level information
@@ -17,7 +19,6 @@ def tcp_description(record: dict) -> str:
     s_ip = record["s_ip"]
     c_pt = record["c_pt"]
     s_pt = record["s_pt"]
-    s_tk = record["app_token"]
 
     #####################################################
     # Timings
@@ -78,9 +79,12 @@ def tcp_description(record: dict) -> str:
         f"Finish [millis]: {te:2.2f}<br>"
         f"Span [millis]: {millis_span:4.2f}<br>"
         f"Span [secnds]: {secnds_span:4.2f}<br>"
-        f"Span [mintes]: {minuts_span:4.2f}<br>")
+        f"Span [mintes]: {minuts_span:4.2f}<br>"
+        
+        f"Application Proto: {app_proto}<br>"
+        f"Application Token: <b>{app_token}</b><br>")
 
-def log_tcp_complete_timeline(tcp_complete: pandas.DataFrame,
+def tcp_complete_timeline(tcp_complete: pandas.DataFrame,
                               bot_complete: pandas.DataFrame, feature: str | None, token: str | None):
     
     # Add the description to each flow if it does not exist yet
@@ -174,7 +178,7 @@ def log_tcp_complete_timeline(tcp_complete: pandas.DataFrame,
 
     return figure
 
-def log_tcp_periodic_timeline(tcp_periodic: pandas.DataFrame,
+def tcp_periodic_timeline(tcp_periodic: pandas.DataFrame,
                               bot_complete: pandas.DataFrame, token: str):
     
     # From the original DataFrame genearate a copy containing all flows whose token
@@ -243,7 +247,7 @@ def log_tcp_periodic_timeline(tcp_periodic: pandas.DataFrame,
 
     return figure
 
-def log_tcp_periodic_flow_chart(tcp_periodic: pandas.DataFrame, connection_id: str, feature: str):
+def connection_id_timeline(tcp_periodic: pandas.DataFrame, connection_id: str, feature: str):
 
     # From the original DataFrame genearate a copy containing all flows whose token
     # is the one requested by the user
@@ -299,5 +303,52 @@ def log_tcp_periodic_flow_chart(tcp_periodic: pandas.DataFrame, connection_id: s
                      title_font=dict(family="Courier New"), tickfont=dict(family="Courier New"))  
     
     figure.update_layout(showlegend=False)
+
+    return figure
+
+def connection_id_discrete_fourier(tcp_periodic: pandas.DataFrame, connection_id: str, feature: str):
+
+    # From the original DataFrame genearate a copy containing all flows whose token
+    # is the one requested by the user
+    selects = tcp_periodic.loc[tcp_periodic["connection_id"] == connection_id].copy()
+
+    s_times = selects["unix_ts_millis"].values / 1000
+    e_times = selects["unix_te_millis"].values / 1000
+    values  = selects[feature].dropna().astype(float).values
+
+    interval = 0.1  # Seconds
+
+    min_time   = s_times.min()
+    max_time   = e_times.max()
+    new_times  = numpy.arange(min_time, max_time, interval)
+    new_values = numpy.zeros_like(new_times)
+
+    for start, end, value in zip(s_times, e_times, values):
+        new_values[(new_times >= start) & (new_times < end)] = value
+
+    dft_values = numpy.fft.fft(new_values)
+    dft_freqs  = numpy.fft.fftfreq(len(new_values), interval)
+
+    # Filter the positive frequencies
+    positive_freqs = dft_freqs >= 0
+    dft_values_positive = dft_values[positive_freqs]
+    dft_freqs_positive = dft_freqs[positive_freqs]
+
+    # Create the plot with Plotly
+    figure = plotly.graph_objects.Figure()
+
+    # Add the magnitude of the DFT as a stem plot
+    figure.add_trace(plotly.graph_objects.Scatter(x=dft_freqs_positive,
+                                                  y=numpy.abs(dft_values_positive),
+                                                  mode='lines', name='DFT Magnitude'))
+
+    # Define the x-axis labels
+    figure.update_yaxes(gridwidth=0.03, 
+                     title="Amplitude", showgrid=True,
+                     title_font=dict(family="Courier New"), tickfont=dict(family="Courier New"))#, type="log")
+    
+    figure.update_xaxes(gridwidth=0.03, 
+                     title="Frequency", showgrid=True, 
+                     title_font=dict(family="Courier New"), tickfont=dict(family="Courier New"))  
 
     return figure

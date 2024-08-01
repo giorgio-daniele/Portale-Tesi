@@ -19,19 +19,19 @@ def data_over_tcp(path: str):
     token = st.selectbox("Seleziona qui il token da filtrare", tokens)
 
     st.markdown(f"### Analisi completa dei flussi di _{token}_")
-    figure = src.lib.log_tcp_complete_timeline(tcp_complete=tcp_complete_frame, 
+    figure = src.lib.tcp_complete_timeline(tcp_complete=tcp_complete_frame, 
                                                         bot_complete=bot_complete_frame, 
                                                         feature=None, token=token)
     st.plotly_chart(figure)
 
     st.markdown("### Volumi in download dei flussi al livello TCP")
-    figure = src.lib.log_tcp_complete_timeline(tcp_complete=tcp_complete_frame, 
+    figure = src.lib.tcp_complete_timeline(tcp_complete=tcp_complete_frame, 
                                                bot_complete=bot_complete_frame, 
                                                feature="s_app_byts", token=None)
     st.plotly_chart(figure)
 
     st.markdown("### Volumi in upload dei flussi al livello TCP")
-    figure = src.lib.log_tcp_complete_timeline(tcp_complete=tcp_complete_frame, 
+    figure = src.lib.tcp_complete_timeline(tcp_complete=tcp_complete_frame, 
                                                bot_complete=bot_complete_frame, 
                                                feature="c_app_byts", token=None)
     st.plotly_chart(figure)
@@ -43,33 +43,50 @@ def data_over_tcp(path: str):
 
     st.markdown("---")
     st.markdown(f"### Analisi periodica dei flussi di _{token}_")
-    figure = src.lib.log_tcp_periodic_timeline(tcp_periodic=tcp_periodic_frame, 
+    figure = src.lib.tcp_periodic_timeline(tcp_periodic=tcp_periodic_frame, 
                                                bot_complete=bot_complete_frame, token=token)
     st.plotly_chart(figure)
 
     connection_ids = list(set(tcp_complete_frame[tcp_complete_frame["app_token"] == token]["connection_id"]))
     connection_id  = st.selectbox("Seleziona qui il token da filtrare", connection_ids)
 
+
+    ################################################
+    # Time analysis
+    ################################################
     st.markdown(f"### Analisi periodica dei volumi in download di _{connection_id}_ (bytes inviati)")
-    figure = src.lib.log_tcp_periodic_flow_chart(tcp_periodic=tcp_periodic_frame, 
-                                                 connection_id=connection_id, feature="s_app_byts")
+    figure = src.lib.connection_id_timeline(tcp_periodic=tcp_periodic_frame, 
+                                            connection_id=connection_id, feature="s_app_byts")
     st.plotly_chart(figure)
 
     st.markdown(f"### Analisi periodica dei volumi in upload di _{connection_id}_ (bytes inviati)")
-    figure = src.lib.log_tcp_periodic_flow_chart(tcp_periodic=tcp_periodic_frame, 
-                                                 connection_id=connection_id, feature="c_app_byts")
+    figure = src.lib.connection_id_timeline(tcp_periodic=tcp_periodic_frame, 
+                                            connection_id=connection_id, feature="c_app_byts")
+    st.plotly_chart(figure)
+
+    ################################################
+    # Frequency analysis
+    ################################################
+    st.markdown(f"### FFT del volume in upload _{connection_id}_ (bytes inviati)")
+    figure = src.lib.connection_id_discrete_fourier(tcp_periodic=tcp_periodic_frame, 
+                                                    connection_id=connection_id, feature="c_app_pkts")
+    st.plotly_chart(figure)
+
+    st.markdown(f"### FFT del volume in download _{connection_id}_ (bytes inviati)")
+    figure = src.lib.connection_id_discrete_fourier(tcp_periodic=tcp_periodic_frame, 
+                                                    connection_id=connection_id, feature="s_app_pkts")
     st.plotly_chart(figure)
 
 
-    st.markdown(f"### Analisi periodica dei volumi in download di _{connection_id}_ (pacchetti inviati)")
-    figure = src.lib.log_tcp_periodic_flow_chart(tcp_periodic=tcp_periodic_frame, 
-                                                 connection_id=connection_id, feature="s_app_pkts")
-    st.plotly_chart(figure)
+    # st.markdown(f"### Analisi periodica dei volumi in download di _{connection_id}_ (pacchetti inviati)")
+    # figure = src.lib.connection_id_timeline(tcp_periodic=tcp_periodic_frame, 
+    #                                         connection_id=connection_id, feature="s_app_pkts")
+    # st.plotly_chart(figure)
 
-    st.markdown(f"### Analisi periodica dei volumi in upload di _{connection_id}_ (pacchetti inviati)")
-    figure = src.lib.log_tcp_periodic_flow_chart(tcp_periodic=tcp_periodic_frame, 
-                                                 connection_id=connection_id, feature="c_app_pkts")
-    st.plotly_chart(figure)
+    # st.markdown(f"### Analisi periodica dei volumi in upload di _{connection_id}_ (pacchetti inviati)")
+    # figure = src.lib.connection_id_timeline(tcp_periodic=tcp_periodic_frame, 
+    #                                         connection_id=connection_id, feature="c_app_pkts")
+    # st.plotly_chart(figure)
 
 
 
