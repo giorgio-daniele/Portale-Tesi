@@ -57,29 +57,28 @@ def tcp_description(record: dict) -> str:
     s_app_rate = record["s_app_rate_kbits"]
 
     return (
-        f"--------------------------------------- <br>"
-        f"<b> Client Related Socket Info </b> <br>"
+        f"<b> Client Related</b> <br>"
         f"IP: {c_ip} PT: {c_pt} <br>"
-        f"--------------------------------------- <br>"
-        f"<b> Server Related Socket Info </b>  <br>"
+        f"Application Bytes: {c_app_btes} <br>" 
+        f"Application Pakts: {c_app_pkts} <br>" 
+        f"Application Rate:  {c_app_rate} <br>" 
+        f"Pure ACKs:  {c_pure_ack_pkts} <br>"
+        f"     ACKs:  {c_ack_pkts} <br>"
+
+        f"<b> Server Related</b> <br>"
         f"IP: {s_ip} PT: {s_pt} <br>"
-        f"--------------------------------------- <br>"
-        f"<b> Client Volume Related Info </b> <br>"
-        f"--------------------------------------- <br>"
-        f"Bytes / Packets:   {c_app_btes} / {c_app_pkts}</b><br>"
-        f"Pure ACKs / ACKs:  {c_pure_ack_pkts} / {c_ack_pkts}<br>"
-        f"--------------------------------------- <br>"
-        f"<b> Server Volume Related Info </b> <br>"
-        f"--------------------------------------- <br>"
-        f"Bytes / Packets:   {s_app_btes} / {s_app_pkts}</b><br>"
-        f"Pure ACKs / ACKs:  {s_pure_ack_pkts} / {s_ack_pkts}<br>"
-        f"--------------------------------------- <br>"
-        f"<b> Timing Information </b> <br>"
-        f"Interval [milliseconds]: [{ts:2.2f}; {te:2.2f}]<br>"
-        f"Interval [seconds]: [{ts_secnds:2.2f}; {te_secnds:2.2f}]<br>"
-        f"Span [milliseconds]: {millis_span:4.2f}   <br>"
-        f"Span [seconds]: {secnds_span:4.2f}  <br>"
-        f"Span [minutes]: {minuts_span:4.2f}  <br>")
+        f"Application Bytes: {s_app_btes} <br>" 
+        f"Application Pakts: {s_app_pkts} <br>" 
+        f"Application Rate:  {s_app_rate} <br>" 
+        f"Pure ACKs:  {s_pure_ack_pkts} <br>"
+        f"     ACKs:  {s_ack_pkts} <br>"
+
+        f"<b> Timing Information</b> <br>"
+        f"Start  [millis]: {ts:2.2f}<br>"
+        f"Finish [millis]: {te:2.2f}<br>"
+        f"Span [millis]: {millis_span:4.2f}<br>"
+        f"Span [secnds]: {secnds_span:4.2f}<br>"
+        f"Span [mintes]: {minuts_span:4.2f}<br>")
 
 def log_tcp_complete_timeline(tcp_complete: pandas.DataFrame,
                               bot_complete: pandas.DataFrame, feature: str | None, token: str | None):
@@ -292,7 +291,7 @@ def log_tcp_periodic_flow_chart(tcp_periodic: pandas.DataFrame, connection_id: s
     # Define the x-axis labels
     figure.update_yaxes(gridwidth=0.03, 
                      title="Volume (B)", showgrid=True,
-                     title_font=dict(family="Courier New"), tickfont=dict(family="Courier New"))
+                     title_font=dict(family="Courier New"), tickfont=dict(family="Courier New"))#, type="log")
     
     figure.update_xaxes(gridwidth=0.03, 
                      title="Time (minutes:seconds)", showgrid=True, 
