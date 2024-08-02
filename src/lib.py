@@ -4,7 +4,7 @@ import plotly.express
 import plotly.graph_objects
 
 
-def tcp_description(record: dict) -> str:
+def tcp_description(record: dict, periodic: bool) -> str:
 
     #####################################################
     # Application level information
@@ -54,35 +54,65 @@ def tcp_description(record: dict) -> str:
     #####################################################
     # Volumes
     #####################################################
-    c_app_rate = record["c_app_rate_kbits"]
-    s_app_rate = record["s_app_rate_kbits"]
 
-    return (
-        f"<b> Client Related</b> <br>"
-        f"IP: {c_ip} PT: {c_pt} <br>"
-        f"Application Bytes: {c_app_btes} <br>" 
-        f"Application Pakts: {c_app_pkts} <br>" 
-        f"Application Rate:  {c_app_rate} <br>" 
-        f"Pure ACKs:  {c_pure_ack_pkts} <br>"
-        f"     ACKs:  {c_ack_pkts} <br>"
+    if periodic == True:
+        c_app_rate = record["c_app_rate_kbits"]
+        s_app_rate = record["s_app_rate_kbits"]
 
-        f"<b> Server Related</b> <br>"
-        f"IP: {s_ip} PT: {s_pt} <br>"
-        f"Application Bytes: {s_app_btes} <br>" 
-        f"Application Pakts: {s_app_pkts} <br>" 
-        f"Application Rate:  {s_app_rate} <br>" 
-        f"Pure ACKs:  {s_pure_ack_pkts} <br>"
-        f"     ACKs:  {s_ack_pkts} <br>"
+    if periodic == True:
+        return (
+            f"<b> Client Related</b> <br>"
+            f"IP: {c_ip} PT: {c_pt} <br>"
+            f"Application Bytes: {c_app_btes} <br>" 
+            f"Application Pakts: {c_app_pkts} <br>" 
+            f"Application Rate:  {c_app_rate} <br>" 
+            f"Pure ACKs:  {c_pure_ack_pkts} <br>"
+            f"     ACKs:  {c_ack_pkts} <br>"
 
-        f"<b> Timing Information</b> <br>"
-        f"Start  [millis]: {ts:2.2f}<br>"
-        f"Finish [millis]: {te:2.2f}<br>"
-        f"Span [millis]: {millis_span:4.2f}<br>"
-        f"Span [secnds]: {secnds_span:4.2f}<br>"
-        f"Span [mintes]: {minuts_span:4.2f}<br>"
-        
-        f"Application Proto: {app_proto}<br>"
-        f"Application Token: <b>{app_token}</b><br>")
+            f"<b> Server Related</b> <br>"
+            f"IP: {s_ip} PT: {s_pt} <br>"
+            f"Application Bytes: {s_app_btes} <br>" 
+            f"Application Pakts: {s_app_pkts} <br>" 
+            f"Application Rate:  {s_app_rate} <br>" 
+            f"Pure ACKs:  {s_pure_ack_pkts} <br>"
+            f"     ACKs:  {s_ack_pkts} <br>"
+
+            f"<b> Timing Information</b> <br>"
+            f"Start  [millis]: {ts:2.2f}<br>"
+            f"Finish [millis]: {te:2.2f}<br>"
+            f"Span [millis]: {millis_span:4.2f}<br>"
+            f"Span [secnds]: {secnds_span:4.2f}<br>"
+            f"Span [mintes]: {minuts_span:4.2f}<br>"
+            
+            f"Application Proto: {app_proto}<br>"
+            f"Application Token: <b>{app_token}</b><br>")
+
+    else:
+        return (
+            f"<b> Client Related</b> <br>"
+            f"IP: {c_ip} PT: {c_pt} <br>"
+            f"Application Bytes: {c_app_btes} <br>" 
+            f"Application Pakts: {c_app_pkts} <br>" 
+            f"Pure ACKs:  {c_pure_ack_pkts} <br>"
+            f"     ACKs:  {c_ack_pkts} <br>"
+
+            f"<b> Server Related</b> <br>"
+            f"IP: {s_ip} PT: {s_pt} <br>"
+            f"Application Bytes: {s_app_btes} <br>" 
+            f"Application Pakts: {s_app_pkts} <br>" 
+            f"Pure ACKs:  {s_pure_ack_pkts} <br>"
+            f"     ACKs:  {s_ack_pkts} <br>"
+
+            f"<b> Timing Information</b> <br>"
+            f"Start  [millis]: {ts:2.2f}<br>"
+            f"Finish [millis]: {te:2.2f}<br>"
+            f"Span [millis]: {millis_span:4.2f}<br>"
+            f"Span [secnds]: {secnds_span:4.2f}<br>"
+            f"Span [mintes]: {minuts_span:4.2f}<br>"
+            
+            f"Application Proto: {app_proto}<br>"
+            f"Application Token: <b>{app_token}</b><br>")
+
 
 def tcp_complete_timeline(tcp_complete: pandas.DataFrame,
                           bot_complete: pandas.DataFrame, feature: str | None, token: str | None):
@@ -91,7 +121,7 @@ def tcp_complete_timeline(tcp_complete: pandas.DataFrame,
     # When rendering more than once the chart, the description
     # should not be generated
     if not "desc" in tcp_complete.columns:
-        tcp_complete["desc"] = tcp_complete.apply(lambda r: tcp_description(r), axis=1)
+        tcp_complete["desc"] = tcp_complete.apply(lambda r: tcp_description(r, periodic=False), axis=1)
 
     ts = "datetime_ts"
     te = "datetime_te"
@@ -196,7 +226,7 @@ def tcp_periodic_timeline(tcp_periodic: pandas.DataFrame,
     # When rendering more than once the chart, the description
     # should not be generated
     if not "desc" in selects.columns:
-        selects["desc"] = selects.apply(lambda r: tcp_description(r), axis=1)
+        selects["desc"] = selects.apply(lambda r: tcp_description(r, periodic=True), axis=1)
 
     ts = "datetime_ts"
     te = "datetime_te"
@@ -258,10 +288,10 @@ def connection_id_timeline(tcp_periodic: pandas.DataFrame, connection_id: str, f
 
     def get_line_color(feature):
         if "s_app" in feature:
-            return "rgba(0, 255, 0, 0.6)"  # Green
+            return "rgba(0, 180, 0, 0.6)"  # Green
         if "c_app" in feature:
-            return "rgba(255, 0, 0, 0.6)"  # Red
-        return "rgba(0, 0, 255, 0.6)"
+            return "rgba(200, 0, 0, 0.6)"  # Red
+        return "rgba(0, 0, 180, 0.6)"
 
     ##################################################
     # Generate a copy of the original pandas DataFrame
@@ -273,7 +303,7 @@ def connection_id_timeline(tcp_periodic: pandas.DataFrame, connection_id: str, f
     # When rendering more than once the chart, the description
     # should not be generated
     if not "desc" in selects.columns:
-        selects["desc"] = selects.apply(lambda r: tcp_description(r), axis=1)
+        selects["desc"] = selects.apply(lambda r: tcp_description(r, periodic=True), axis=1)
 
     ts = "datetime_ts"
     te = "datetime_te"

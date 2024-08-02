@@ -1,54 +1,200 @@
-# import os
-# import pandas
-# import streamlit
-# import src
-# import src.lib
+import os
+import pandas as pd
+import streamlit
+import src.lib
 
-# log_tcp_complete = os.path.join(os.getcwd(), "data/sky/desktop", "log_tcp_complete.enhanced")
-# log_udp_complete = os.path.join(os.getcwd(), "data/sky/desktop", "log_udp_complete.enhanced")
-# log_tcp_periodic = os.path.join(os.getcwd(), "data/sky/desktop", "log_tcp_periodic.enhanced")
-# log_bot_complete = os.path.join(os.getcwd(), "data/sky/desktop", "streambot_trace.csv")
 
-# tcp_complete = pandas.read_csv(filepath_or_buffer=log_tcp_complete, delimiter=" ")
-# tcp_periodic = pandas.read_csv(filepath_or_buffer=log_tcp_periodic, delimiter=" ")
-# udp_complete = pandas.read_csv(filepath_or_buffer=log_udp_complete, delimiter=" ")
-# bot_complete = pandas.read_csv(filepath_or_buffer=log_bot_complete, delimiter=" ")
+def data_over_tcp(path: str):
 
-# tcp_periodic["session_id"] = tcp_periodic.apply(lambda row: f"{row['s_ip']}:{row['s_pt']} -- {row['c_ip']}:{row['c_pt']}", axis=1)
+    tcp_complete_frame = pd.read_csv(os.path.join(path, "log_tcp_complete.csv"), delimiter= " ") 
+    tcp_periodic_frame = pd.read_csv(os.path.join(path, "log_tcp_periodic.csv"), delimiter= " ") 
+    bot_complete_frame = pd.read_csv(os.path.join(path, "streambot_trace.csv"),  delimiter= " ") 
 
-# def tcp_chapter():
+    ##############################################
+    # Token selection section
+    ##############################################
 
-#     with open(os.path.join(os.getcwd(), "htmls", "tcp_complete_tokens_desc.html"), "r") as f:
-#         tcp_complete_description = f.read()  
+    page = "token_section.html"
+    path = os.path.join(os.path.dirname(__file__), "..", "htmls", page)
+    with open(path, "r") as f:
+        page_data = f.read()
+    streamlit.markdown(page_data, unsafe_allow_html=True)
+
+    tokens = list(set(tcp_complete_frame["app_token"]))
+    token  = streamlit.selectbox("Seleziona qui il token da filtrare", tokens)
+    figure = src.lib.tcp_complete_timeline(tcp_complete=tcp_complete_frame, 
+                                           bot_complete=bot_complete_frame, feature=None, token=token)
+                                           
+    streamlit.plotly_chart(figure)
+    streamlit.caption(f"_Token selezionato_: :blue[{token}]")
+    streamlit.markdown("---")
+
+    ##############################################
+    # Volume section
+    ##############################################
+
+    page = "volume_section.html"
+    path = os.path.join(os.path.dirname(__file__), "..", "htmls", page)
+    with open(path, "r") as f:
+        page_data = f.read()
+    streamlit.markdown(page_data, unsafe_allow_html=True)
+
+    figure = src.lib.tcp_complete_timeline(tcp_complete=tcp_complete_frame, 
+                                           bot_complete=bot_complete_frame, feature="s_app_byts", token=None)
+    streamlit.plotly_chart(figure)
+    streamlit.caption(f"_Evoluzione del livello di :green[scaricamento] al livello TCP_")
+
+    figure = src.lib.tcp_complete_timeline(tcp_complete=tcp_complete_frame, 
+                                           bot_complete=bot_complete_frame, feature="c_app_byts", token=None)
+    streamlit.plotly_chart(figure)
+    streamlit.caption(f"_Evoluzione del livello di :red[caricamento] al livello TCP_")
+    streamlit.markdown("---")
+
+    ##############################################
+    # Periodic plotting
+    ##############################################
+
+    page = "periodic_section.html"
+    path = os.path.join(os.path.dirname(__file__), "..", "htmls", page)
+    with open(path, "r") as f:
+        page_data = f.read()
+    streamlit.markdown(page_data, unsafe_allow_html=True)
+
+    figure = src.lib.tcp_periodic_timeline(tcp_periodic=tcp_periodic_frame, bot_complete=bot_complete_frame, token=token)
+    streamlit.plotly_chart(figure)
+    streamlit.caption(f"_Evoluzione dei flussi ascrivibili al token_: :blue[{token}]")
+
+    connection_ids = list(set(tcp_complete_frame[tcp_complete_frame["app_token"] == token]["connection_id"]))
+    connection_id  = streamlit.selectbox("Seleziona qui il flusso da dettagliare", connection_ids)
+
+    ##############################################
+    # Packet progression (time domain)
+    ##############################################
+
+    col1, col2 = streamlit.columns(2)
+
+    with col1:
+
+        feature = "s_app_byts"
+        figure  = src.lib.connection_id_timeline(tcp_periodic=tcp_periodic_frame, connection_id=connection_id, feature=feature)
+        streamlit.plotly_chart(figure)
+        streamlit.caption(f"_Progressione byte inviati dal server_")
+
+        feature = "s_app_byts"
+        figure  = src.lib.connection_id_discrete_fourier(tcp_periodic=tcp_periodic_frame, connection_id=connection_id, feature=feature)
+        streamlit.plotly_chart(figure)
+        streamlit.caption(f"_Spettro di frequenza del segnale_")
+
+        feature = "s_app_pkts"
+        figure = src.lib.connection_id_timeline(tcp_periodic=tcp_periodic_frame, connection_id=connection_id, feature=feature)
+        streamlit.plotly_chart(figure)
+        streamlit.caption(f"_Progressione pacchetti inviati dal server_")
+
+        feature = "s_app_pkts"
+        figure = src.lib.connection_id_discrete_fourier(tcp_periodic=tcp_periodic_frame, connection_id=connection_id, feature=feature)
+        streamlit.plotly_chart(figure)
+        streamlit.caption(f"_Spettro di frequenza del segnale_")
+        streamlit.markdown("---")
+
+        feature = "s_ack_pkts"
+        figure = src.lib.connection_id_timeline(tcp_periodic=tcp_periodic_frame, connection_id=connection_id, feature=feature)
+        streamlit.plotly_chart(figure)
+        streamlit.caption(f"_Progressione pacchetti inviati dal server_")
+
+        feature = "s_ack_pkts"
+        figure = src.lib.connection_id_discrete_fourier(tcp_periodic=tcp_periodic_frame, connection_id=connection_id, feature=feature)
+        streamlit.plotly_chart(figure)
+        streamlit.caption(f"_Spettro di frequenza del segnale_")
+        streamlit.markdown("---")
+
+    with col2:
+
+        feature = "c_app_byts"
+        figure  = src.lib.connection_id_timeline(tcp_periodic=tcp_periodic_frame, connection_id=connection_id, feature=feature)
+        streamlit.plotly_chart(figure)
+        streamlit.caption(f"_Progressione byte inviati dal client_")
+
+        feature = "c_app_byts"
+        figure  = src.lib.connection_id_discrete_fourier(tcp_periodic=tcp_periodic_frame, connection_id=connection_id, feature=feature)
+        streamlit.plotly_chart(figure)
+        streamlit.caption(f"_Spettro di frequenza del segnale_")
+
+        feature = "c_app_pkts"
+        figure = src.lib.connection_id_timeline(tcp_periodic=tcp_periodic_frame, connection_id=connection_id, feature=feature)
+        streamlit.plotly_chart(figure)
+        streamlit.caption(f"_Progressione pacchetti inviati dal client_")
+
+        feature = "c_app_pkts"
+        figure = src.lib.connection_id_discrete_fourier(tcp_periodic=tcp_periodic_frame, connection_id=connection_id, feature=feature)
+        streamlit.plotly_chart(figure)
+        streamlit.caption(f"_Spettro di frequenza del segnale_")
+        streamlit.markdown("---")
+
+        feature = "c_ack_pkts"
+        figure = src.lib.connection_id_timeline(tcp_periodic=tcp_periodic_frame, connection_id=connection_id, feature=feature)
+        streamlit.plotly_chart(figure)
+        streamlit.caption(f"_Progressione pacchetti inviati dal server_")
+
+        feature = "c_ack_pkts"
+        figure = src.lib.connection_id_discrete_fourier(tcp_periodic=tcp_periodic_frame, connection_id=connection_id, feature=feature)
+        streamlit.plotly_chart(figure)
+        streamlit.caption(f"_Spettro di frequenza del segnale_")
+        streamlit.markdown("---")
+
+
+
+
+def main():
+
+    ########################
+    # Header
+    ########################
+    streamlit.markdown("## Analisi traffico applicativo SKY")
+
+    device = "data/sky/desktop"
+    folder = os.path.join(os.path.dirname(__file__), "..", device)
+
+    options = dict()
+
+    for qos in os.listdir(folder):
+        options[qos] = [exp for exp in os.listdir(os.path.join(folder, qos))]
+
+    col1, col2 = streamlit.columns(2)
+
+    ############################################################
+    # Select among available QoS testbed conditions
+    ############################################################
+
+    with col1:
+        help = """
+            Select here the QoS condition you like
+            the most, in order to inspect differences 
+            on volume, bitrate in each flow
+        """
+        qos = streamlit.selectbox(label="QoS setup selection",
+                           options=list(options.keys()), help=help)
+        
+    ############################################################
+    # Select among available experiments for that QoS condition
+    ############################################################
+
+    with col2:
+        help = """
+            Select here the experiment you like the
+            most, according to the previous selection
+            of QoS condition
+        """
+        num = streamlit.selectbox(label="Experiment selection",
+                           options=list(options[qos]),  help=help)
     
-#     with open(os.path.join(os.getcwd(), "htmls", "tcp_complete_tokens_desc.html"), "r") as f:
-#         tcp_periodic_description = f.read()  
+    streamlit.markdown(f"#### Current selection")
+    streamlit.caption(f"_Dataset_: :blue[{qos}] and experiment :green[{num}]")
+    streamlit.markdown("---")
 
-#     streamlit.markdown("# Traffico applicativo al livello TCP")
-#     streamlit.markdown("---")
-#     streamlit.markdown("### Distribuzione dei token al livello TCP")
-#     streamlit.markdown(tcp_complete_description, unsafe_allow_html=True)
+    data_over_tcp(path=os.path.join(folder, qos, num))
+    
 
-#     options = list(set(tcp_complete["stoken"]))
-#     token = streamlit.selectbox("Seleziona qui il token da filtrare", options)
+main()
 
-#     streamlit.markdown(f"### Analisi completa dei flussi di _{token}_")
-#     streamlit.plotly_chart(src.lib.log_tcp_complete_timeline(tcp_complete=tcp_complete, bot_complete=bot_complete, feature=None, token=token))
-
-#     streamlit.markdown(f"### Analisi periodica dei flussi di _{token}_")
-#     streamlit.plotly_chart(src.lib.log_tcp_periodic_timeline(tcp_periodic=tcp_periodic, bot_complete=bot_complete, token=token))
-
-#     streamlit.markdown("---")
-#     streamlit.markdown("### Volumi applicativi")
-#     streamlit.markdown(tcp_periodic_description, unsafe_allow_html=True)
-
-#     streamlit.markdown("### Volumi in download dei flussi al livello TCP")
-#     streamlit.plotly_chart(src.lib.log_tcp_complete_timeline(tcp_complete=tcp_complete, bot_complete=bot_complete, feature="s_app_byts", token=None))
-
-#     streamlit.markdown("### Volumi in upload dei flussi al livello TCP")
-#     streamlit.plotly_chart(src.lib.log_tcp_complete_timeline(tcp_complete=tcp_complete, bot_complete=bot_complete, feature="c_app_byts", token=None))
-
-
-# tcp_chapter()
 
 

@@ -1,4 +1,4 @@
-event unix_ts from_origin_ms from_origin_s
+action unix_ts from_origin_ts from_origin_s
 origin 1716364542751.4412 0.0 0.0
 sniffer-on 1716364542754.283 2.841796875 0.002841796875
 sky-on 1716364543072.8193 321.378173828125 0.321378173828125

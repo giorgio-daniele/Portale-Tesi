@@ -80,6 +80,8 @@ def data_over_tcp(path: str):
         figure  = src.lib.connection_id_timeline(tcp_periodic=tcp_periodic_frame, connection_id=connection_id, feature=feature)
         streamlit.plotly_chart(figure)
         streamlit.caption(f"_Progressione byte inviati dal server_")
+
+        feature = "s_app_byts"
         figure  = src.lib.connection_id_discrete_fourier(tcp_periodic=tcp_periodic_frame, connection_id=connection_id, feature=feature)
         streamlit.plotly_chart(figure)
         streamlit.caption(f"_Spettro di frequenza del segnale_")
@@ -88,6 +90,19 @@ def data_over_tcp(path: str):
         figure = src.lib.connection_id_timeline(tcp_periodic=tcp_periodic_frame, connection_id=connection_id, feature=feature)
         streamlit.plotly_chart(figure)
         streamlit.caption(f"_Progressione pacchetti inviati dal server_")
+
+        feature = "s_app_pkts"
+        figure = src.lib.connection_id_discrete_fourier(tcp_periodic=tcp_periodic_frame, connection_id=connection_id, feature=feature)
+        streamlit.plotly_chart(figure)
+        streamlit.caption(f"_Spettro di frequenza del segnale_")
+        streamlit.markdown("---")
+
+        feature = "s_ack_pkts"
+        figure = src.lib.connection_id_timeline(tcp_periodic=tcp_periodic_frame, connection_id=connection_id, feature=feature)
+        streamlit.plotly_chart(figure)
+        streamlit.caption(f"_Progressione pacchetti inviati dal server_")
+
+        feature = "s_ack_pkts"
         figure = src.lib.connection_id_discrete_fourier(tcp_periodic=tcp_periodic_frame, connection_id=connection_id, feature=feature)
         streamlit.plotly_chart(figure)
         streamlit.caption(f"_Spettro di frequenza del segnale_")
@@ -99,6 +114,8 @@ def data_over_tcp(path: str):
         figure  = src.lib.connection_id_timeline(tcp_periodic=tcp_periodic_frame, connection_id=connection_id, feature=feature)
         streamlit.plotly_chart(figure)
         streamlit.caption(f"_Progressione byte inviati dal client_")
+
+        feature = "c_app_byts"
         figure  = src.lib.connection_id_discrete_fourier(tcp_periodic=tcp_periodic_frame, connection_id=connection_id, feature=feature)
         streamlit.plotly_chart(figure)
         streamlit.caption(f"_Spettro di frequenza del segnale_")
@@ -107,59 +124,24 @@ def data_over_tcp(path: str):
         figure = src.lib.connection_id_timeline(tcp_periodic=tcp_periodic_frame, connection_id=connection_id, feature=feature)
         streamlit.plotly_chart(figure)
         streamlit.caption(f"_Progressione pacchetti inviati dal client_")
+
+        feature = "c_app_pkts"
         figure = src.lib.connection_id_discrete_fourier(tcp_periodic=tcp_periodic_frame, connection_id=connection_id, feature=feature)
         streamlit.plotly_chart(figure)
         streamlit.caption(f"_Spettro di frequenza del segnale_")
         streamlit.markdown("---")
 
+        feature = "c_ack_pkts"
+        figure = src.lib.connection_id_timeline(tcp_periodic=tcp_periodic_frame, connection_id=connection_id, feature=feature)
+        streamlit.plotly_chart(figure)
+        streamlit.caption(f"_Progressione pacchetti inviati dal server_")
 
-    # figure = src.lib.connection_id_discrete_fourier(tcp_periodic=tcp_periodic_frame, connection_id=connection_id, feature="s_app_byts")
-    # streamlit.plotly_chart(figure)
-    # # streamlit.caption(f"_Spettro di frequenza (DTF) dei byte applicativi ascrivibili alla sessione_: :blue[{connection_id}] invati dal server")
-    # streamlit.markdown("---")
+        feature = "c_ack_pkts"
+        figure = src.lib.connection_id_discrete_fourier(tcp_periodic=tcp_periodic_frame, connection_id=connection_id, feature=feature)
+        streamlit.plotly_chart(figure)
+        streamlit.caption(f"_Spettro di frequenza del segnale_")
+        streamlit.markdown("---")
 
-    # streamlit.markdown("#### Pacchetti applicativi al server")
-    # figure = src.lib.connection_id_timeline(tcp_periodic=tcp_periodic_frame, connection_id=connection_id, feature="s_app_pkts")
-    # streamlit.plotly_chart(figure)
-    # # streamlit.caption(f"_Evoluzione del valore dei pacchetti applicativi ascrivibili alla sessione_: :blue[{connection_id}] invati dal server")
-    # mean = src.lib.mean_value(tcp_periodic=tcp_periodic_frame, connection_id=connection_id, feature="s_app_pkts")
-    # stdv = src.lib.stdv_value(tcp_periodic=tcp_periodic_frame, connection_id=connection_id, feature="s_app_pkts")
-    # streamlit.caption(f"_Valore medio_: :blue[{mean:4.2f}], _Valore medio_: :blue[{stdv:4.2f}]")
-
-    # figure = src.lib.connection_id_discrete_fourier(tcp_periodic=tcp_periodic_frame, connection_id=connection_id, feature="s_app_pkts")
-    # streamlit.plotly_chart(figure)
-    # # streamlit.caption(f"_Spettro di frequenza (DTF) dei pacchetti applicativi ascrivibili alla sessione_: :blue[{connection_id}] invati dal server")
-    # streamlit.markdown("---")
-
-    # ##############################################
-    # # Periodic progression at client side
-    # ##############################################
-
-    # streamlit.markdown("#### Byte applicativi al client")
-    # figure = src.lib.connection_id_timeline(tcp_periodic=tcp_periodic_frame, connection_id=connection_id, feature="c_app_byts")
-    # streamlit.plotly_chart(figure)
-    # # streamlit.caption(f"_Evoluzione del valore di byte applicativi ascrivibili alla sessione_: :blue[{connection_id}] invati dal client")
-    # mean = src.lib.mean_value(tcp_periodic=tcp_periodic_frame, connection_id=connection_id, feature="c_app_byts")
-    # stdv = src.lib.stdv_value(tcp_periodic=tcp_periodic_frame, connection_id=connection_id, feature="c_app_byts")
-    # streamlit.caption(f"_Valore medio_: :blue[{mean:4.2f}], _Valore medio_: :blue[{stdv:4.2f}]")
-
-    # figure = src.lib.connection_id_discrete_fourier(tcp_periodic=tcp_periodic_frame, connection_id=connection_id, feature="c_app_byts")
-    # streamlit.plotly_chart(figure)
-    # # streamlit.caption(f"_Spettro di frequenza (DTF) dei byte applicativi ascrivibili alla sessione_: :blue[{connection_id}] invati dal client")
-    # streamlit.markdown("---")
-
-    # streamlit.markdown("#### Pacchetti applicativi al client")
-    # figure = src.lib.connection_id_timeline(tcp_periodic=tcp_periodic_frame, connection_id=connection_id, feature="c_app_pkts")
-    # streamlit.plotly_chart(figure)
-    # # streamlit.caption(f"_Evoluzione del valore dei pacchetti applicativi ascrivibili alla sessione_: :blue[{connection_id}] invati dal client")
-    # mean = src.lib.mean_value(tcp_periodic=tcp_periodic_frame, connection_id=connection_id, feature="c_app_byts")
-    # stdv = src.lib.stdv_value(tcp_periodic=tcp_periodic_frame, connection_id=connection_id, feature="c_app_byts")
-    # streamlit.caption(f"_Valore medio_: :blue[{mean:4.2f}], _Valore medio_: :blue[{stdv:4.2f}]")
-
-    # figure = src.lib.connection_id_discrete_fourier(tcp_periodic=tcp_periodic_frame, connection_id=connection_id, feature="c_app_pkts")
-    # streamlit.plotly_chart(figure)
-    # # streamlit.caption(f"_Spettro di frequenza (DTF) dei pacchetti applicativi ascrivibili alla sessione_: :blue[{connection_id}] invati dal client")
-    # streamlit.markdown("---")
 
 
 
