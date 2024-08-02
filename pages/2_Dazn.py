@@ -1,6 +1,6 @@
 import os
 import pandas as pd
-import streamlit as st
+import streamlit
 import src
 import src.lib
 
@@ -12,85 +12,163 @@ def data_over_tcp(path: str):
     bot_complete_frame = pd.read_csv(os.path.join(path, "streambot_trace.csv"),  delimiter= " ") 
 
     ##############################################
-    # Plot the evolution of data exchange over TCP
+    # Token selection section
     ##############################################
+
+    page = "token_section.html"
+    path = os.path.join(os.path.dirname(__file__), "..", "htmls", page)
+    with open(path, "r") as f:
+        page_data = f.read()
+    streamlit.markdown(page_data, unsafe_allow_html=True)
 
     tokens = list(set(tcp_complete_frame["app_token"]))
-    token = st.selectbox("Seleziona qui il token da filtrare", tokens)
-
-    st.markdown(f"### Analisi completa dei flussi di _{token}_")
+    token  = streamlit.selectbox("Seleziona qui il token da filtrare", tokens)
     figure = src.lib.tcp_complete_timeline(tcp_complete=tcp_complete_frame, 
-                                                        bot_complete=bot_complete_frame, 
-                                                        feature=None, token=token)
-    st.plotly_chart(figure)
-
-    st.markdown("### Volumi in download dei flussi al livello TCP")
-    figure = src.lib.tcp_complete_timeline(tcp_complete=tcp_complete_frame, 
-                                               bot_complete=bot_complete_frame, 
-                                               feature="s_app_byts", token=None)
-    st.plotly_chart(figure)
-
-    st.markdown("### Volumi in upload dei flussi al livello TCP")
-    figure = src.lib.tcp_complete_timeline(tcp_complete=tcp_complete_frame, 
-                                               bot_complete=bot_complete_frame, 
-                                               feature="c_app_byts", token=None)
-    st.plotly_chart(figure)
+                                           bot_complete=bot_complete_frame, feature=None, token=token)
+                                           
+    streamlit.plotly_chart(figure)
+    streamlit.caption(f"_Token selezionato_: :blue[{token}]")
+    streamlit.markdown("---")
 
     ##############################################
-    # Plot the periodic evolution of all flow that
-    # are associated with the selected token
+    # Volume section
     ##############################################
 
-    st.markdown("---")
-    st.markdown(f"### Analisi periodica dei flussi di _{token}_")
-    figure = src.lib.tcp_periodic_timeline(tcp_periodic=tcp_periodic_frame, 
-                                               bot_complete=bot_complete_frame, token=token)
-    st.plotly_chart(figure)
+    page = "volume_section.html"
+    path = os.path.join(os.path.dirname(__file__), "..", "htmls", page)
+    with open(path, "r") as f:
+        page_data = f.read()
+    streamlit.markdown(page_data, unsafe_allow_html=True)
+
+    figure = src.lib.tcp_complete_timeline(tcp_complete=tcp_complete_frame, 
+                                           bot_complete=bot_complete_frame, feature="s_app_byts", token=None)
+    streamlit.plotly_chart(figure)
+    streamlit.caption(f"_Evoluzione del livello di :green[scaricamento] al livello TCP_")
+
+    figure = src.lib.tcp_complete_timeline(tcp_complete=tcp_complete_frame, 
+                                           bot_complete=bot_complete_frame, feature="c_app_byts", token=None)
+    streamlit.plotly_chart(figure)
+    streamlit.caption(f"_Evoluzione del livello di :red[caricamento] al livello TCP_")
+    streamlit.markdown("---")
+
+    ##############################################
+    # Periodic plotting
+    ##############################################
+
+    page = "periodic_section.html"
+    path = os.path.join(os.path.dirname(__file__), "..", "htmls", page)
+    with open(path, "r") as f:
+        page_data = f.read()
+    streamlit.markdown(page_data, unsafe_allow_html=True)
+
+    figure = src.lib.tcp_periodic_timeline(tcp_periodic=tcp_periodic_frame, bot_complete=bot_complete_frame, token=token)
+    streamlit.plotly_chart(figure)
+    streamlit.caption(f"_Evoluzione dei flussi ascrivibili al token_: :blue[{token}]")
 
     connection_ids = list(set(tcp_complete_frame[tcp_complete_frame["app_token"] == token]["connection_id"]))
-    connection_id  = st.selectbox("Seleziona qui il token da filtrare", connection_ids)
+    connection_id  = streamlit.selectbox("Seleziona qui il flusso da dettagliare", connection_ids)
+
+    ##############################################
+    # Packet progression (time domain)
+    ##############################################
+
+    col1, col2 = streamlit.columns(2)
+
+    with col1:
+
+        feature = "s_app_byts"
+        figure  = src.lib.connection_id_timeline(tcp_periodic=tcp_periodic_frame, connection_id=connection_id, feature=feature)
+        streamlit.plotly_chart(figure)
+        streamlit.caption(f"_Progressione byte inviati dal server_")
+        figure  = src.lib.connection_id_discrete_fourier(tcp_periodic=tcp_periodic_frame, connection_id=connection_id, feature=feature)
+        streamlit.plotly_chart(figure)
+        streamlit.caption(f"_Spettro di frequenza del segnale_")
+
+        feature = "s_app_pkts"
+        figure = src.lib.connection_id_timeline(tcp_periodic=tcp_periodic_frame, connection_id=connection_id, feature=feature)
+        streamlit.plotly_chart(figure)
+        streamlit.caption(f"_Progressione pacchetti inviati dal server_")
+        figure = src.lib.connection_id_discrete_fourier(tcp_periodic=tcp_periodic_frame, connection_id=connection_id, feature=feature)
+        streamlit.plotly_chart(figure)
+        streamlit.caption(f"_Spettro di frequenza del segnale_")
+        streamlit.markdown("---")
+
+    with col2:
+
+        feature = "c_app_byts"
+        figure  = src.lib.connection_id_timeline(tcp_periodic=tcp_periodic_frame, connection_id=connection_id, feature=feature)
+        streamlit.plotly_chart(figure)
+        streamlit.caption(f"_Progressione byte inviati dal client_")
+        figure  = src.lib.connection_id_discrete_fourier(tcp_periodic=tcp_periodic_frame, connection_id=connection_id, feature=feature)
+        streamlit.plotly_chart(figure)
+        streamlit.caption(f"_Spettro di frequenza del segnale_")
+
+        feature = "c_app_pkts"
+        figure = src.lib.connection_id_timeline(tcp_periodic=tcp_periodic_frame, connection_id=connection_id, feature=feature)
+        streamlit.plotly_chart(figure)
+        streamlit.caption(f"_Progressione pacchetti inviati dal client_")
+        figure = src.lib.connection_id_discrete_fourier(tcp_periodic=tcp_periodic_frame, connection_id=connection_id, feature=feature)
+        streamlit.plotly_chart(figure)
+        streamlit.caption(f"_Spettro di frequenza del segnale_")
+        streamlit.markdown("---")
 
 
-    ################################################
-    # Time analysis
-    ################################################
-    st.markdown(f"### Analisi periodica dei volumi in download di _{connection_id}_ (bytes inviati)")
-    figure = src.lib.connection_id_timeline(tcp_periodic=tcp_periodic_frame, 
-                                            connection_id=connection_id, feature="s_app_byts")
-    st.plotly_chart(figure)
+    # figure = src.lib.connection_id_discrete_fourier(tcp_periodic=tcp_periodic_frame, connection_id=connection_id, feature="s_app_byts")
+    # streamlit.plotly_chart(figure)
+    # # streamlit.caption(f"_Spettro di frequenza (DTF) dei byte applicativi ascrivibili alla sessione_: :blue[{connection_id}] invati dal server")
+    # streamlit.markdown("---")
 
-    st.markdown(f"### Analisi periodica dei volumi in upload di _{connection_id}_ (bytes inviati)")
-    figure = src.lib.connection_id_timeline(tcp_periodic=tcp_periodic_frame, 
-                                            connection_id=connection_id, feature="c_app_byts")
-    st.plotly_chart(figure)
+    # streamlit.markdown("#### Pacchetti applicativi al server")
+    # figure = src.lib.connection_id_timeline(tcp_periodic=tcp_periodic_frame, connection_id=connection_id, feature="s_app_pkts")
+    # streamlit.plotly_chart(figure)
+    # # streamlit.caption(f"_Evoluzione del valore dei pacchetti applicativi ascrivibili alla sessione_: :blue[{connection_id}] invati dal server")
+    # mean = src.lib.mean_value(tcp_periodic=tcp_periodic_frame, connection_id=connection_id, feature="s_app_pkts")
+    # stdv = src.lib.stdv_value(tcp_periodic=tcp_periodic_frame, connection_id=connection_id, feature="s_app_pkts")
+    # streamlit.caption(f"_Valore medio_: :blue[{mean:4.2f}], _Valore medio_: :blue[{stdv:4.2f}]")
 
-    ################################################
-    # Frequency analysis
-    ################################################
-    st.markdown(f"### FFT del volume in upload _{connection_id}_ (bytes inviati)")
-    figure = src.lib.connection_id_discrete_fourier(tcp_periodic=tcp_periodic_frame, 
-                                                    connection_id=connection_id, feature="c_app_pkts")
-    st.plotly_chart(figure)
+    # figure = src.lib.connection_id_discrete_fourier(tcp_periodic=tcp_periodic_frame, connection_id=connection_id, feature="s_app_pkts")
+    # streamlit.plotly_chart(figure)
+    # # streamlit.caption(f"_Spettro di frequenza (DTF) dei pacchetti applicativi ascrivibili alla sessione_: :blue[{connection_id}] invati dal server")
+    # streamlit.markdown("---")
 
-    st.markdown(f"### FFT del volume in download _{connection_id}_ (bytes inviati)")
-    figure = src.lib.connection_id_discrete_fourier(tcp_periodic=tcp_periodic_frame, 
-                                                    connection_id=connection_id, feature="s_app_pkts")
-    st.plotly_chart(figure)
+    # ##############################################
+    # # Periodic progression at client side
+    # ##############################################
 
+    # streamlit.markdown("#### Byte applicativi al client")
+    # figure = src.lib.connection_id_timeline(tcp_periodic=tcp_periodic_frame, connection_id=connection_id, feature="c_app_byts")
+    # streamlit.plotly_chart(figure)
+    # # streamlit.caption(f"_Evoluzione del valore di byte applicativi ascrivibili alla sessione_: :blue[{connection_id}] invati dal client")
+    # mean = src.lib.mean_value(tcp_periodic=tcp_periodic_frame, connection_id=connection_id, feature="c_app_byts")
+    # stdv = src.lib.stdv_value(tcp_periodic=tcp_periodic_frame, connection_id=connection_id, feature="c_app_byts")
+    # streamlit.caption(f"_Valore medio_: :blue[{mean:4.2f}], _Valore medio_: :blue[{stdv:4.2f}]")
 
-    # st.markdown(f"### Analisi periodica dei volumi in download di _{connection_id}_ (pacchetti inviati)")
-    # figure = src.lib.connection_id_timeline(tcp_periodic=tcp_periodic_frame, 
-    #                                         connection_id=connection_id, feature="s_app_pkts")
-    # st.plotly_chart(figure)
+    # figure = src.lib.connection_id_discrete_fourier(tcp_periodic=tcp_periodic_frame, connection_id=connection_id, feature="c_app_byts")
+    # streamlit.plotly_chart(figure)
+    # # streamlit.caption(f"_Spettro di frequenza (DTF) dei byte applicativi ascrivibili alla sessione_: :blue[{connection_id}] invati dal client")
+    # streamlit.markdown("---")
 
-    # st.markdown(f"### Analisi periodica dei volumi in upload di _{connection_id}_ (pacchetti inviati)")
-    # figure = src.lib.connection_id_timeline(tcp_periodic=tcp_periodic_frame, 
-    #                                         connection_id=connection_id, feature="c_app_pkts")
-    # st.plotly_chart(figure)
+    # streamlit.markdown("#### Pacchetti applicativi al client")
+    # figure = src.lib.connection_id_timeline(tcp_periodic=tcp_periodic_frame, connection_id=connection_id, feature="c_app_pkts")
+    # streamlit.plotly_chart(figure)
+    # # streamlit.caption(f"_Evoluzione del valore dei pacchetti applicativi ascrivibili alla sessione_: :blue[{connection_id}] invati dal client")
+    # mean = src.lib.mean_value(tcp_periodic=tcp_periodic_frame, connection_id=connection_id, feature="c_app_byts")
+    # stdv = src.lib.stdv_value(tcp_periodic=tcp_periodic_frame, connection_id=connection_id, feature="c_app_byts")
+    # streamlit.caption(f"_Valore medio_: :blue[{mean:4.2f}], _Valore medio_: :blue[{stdv:4.2f}]")
+
+    # figure = src.lib.connection_id_discrete_fourier(tcp_periodic=tcp_periodic_frame, connection_id=connection_id, feature="c_app_pkts")
+    # streamlit.plotly_chart(figure)
+    # # streamlit.caption(f"_Spettro di frequenza (DTF) dei pacchetti applicativi ascrivibili alla sessione_: :blue[{connection_id}] invati dal client")
+    # streamlit.markdown("---")
 
 
 
 def main():
+
+    ########################
+    # Header
+    ########################
+    streamlit.markdown("## Analisi traffico applicativo DAZN")
 
     device = "data/dazn/desktop"
     folder = os.path.join(os.path.dirname(__file__), "..", device)
@@ -100,27 +178,37 @@ def main():
     for qos in os.listdir(folder):
         options[qos] = [exp for exp in os.listdir(os.path.join(folder, qos))]
 
-    col1, col2 = st.columns(2)
+    col1, col2 = streamlit.columns(2)
 
     ############################################################
     # Select among available QoS testbed conditions
     ############################################################
 
     with col1:
-        qos = st.selectbox(label="Scegli la condizione di QoS",
-                           options=list(options.keys()),
-                           help="Inserisci una tra le opzioni")
+        help = """
+            Select here the QoS condition you like
+            the most, in order to inspect differences 
+            on volume, bitrate in each flow
+        """
+        qos = streamlit.selectbox(label="QoS setup selection",
+                           options=list(options.keys()), help=help)
         
     ############################################################
     # Select among available experiments for that QoS condition
     ############################################################
 
     with col2:
-        num = st.selectbox(label="Inserisci l'esperimento da visualizzare",
-                           options=list(options[qos]),
-                           help="Inserisci una tra le opzioni")
+        help = """
+            Select here the experiment you like the
+            most, according to the previous selection
+            of QoS condition
+        """
+        num = streamlit.selectbox(label="Experiment selection",
+                           options=list(options[qos]),  help=help)
     
-    st.write(f"You selected: qos = {qos}, num = {num}")
+    streamlit.markdown(f"#### Current selection")
+    streamlit.caption(f"_Dataset_: :blue[{qos}] and experiment :green[{num}]")
+    streamlit.markdown("---")
 
     data_over_tcp(path=os.path.join(folder, qos, num))
     

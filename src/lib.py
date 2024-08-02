@@ -85,7 +85,7 @@ def tcp_description(record: dict) -> str:
         f"Application Token: <b>{app_token}</b><br>")
 
 def tcp_complete_timeline(tcp_complete: pandas.DataFrame,
-                              bot_complete: pandas.DataFrame, feature: str | None, token: str | None):
+                          bot_complete: pandas.DataFrame, feature: str | None, token: str | None):
     
     # Add the description to each flow if it does not exist yet
     # When rendering more than once the chart, the description
@@ -100,7 +100,7 @@ def tcp_complete_timeline(tcp_complete: pandas.DataFrame,
     # generate a figure that associates a color to each existing
     # token in the plot
     if not feature and not token:
-        color = "app_token"
+        color  = "app_token"
         figure = plotly.express.timeline(data_frame=tcp_complete,
                                          x_start=ts, x_end=te, y=tcp_complete.index, color=color,
                                          custom_data=["desc"])
@@ -121,8 +121,13 @@ def tcp_complete_timeline(tcp_complete: pandas.DataFrame,
     # generate a figure that highlights that feature (a column)
     # in the dataframe
     if feature and not token:
+        if "s_app" in feature:
+            color_scale = plotly.express.colors.sequential.Greens
+        else:
+            color_scale = plotly.express.colors.sequential.Reds
         figure = plotly.express.timeline(data_frame=tcp_complete,
                                          x_start=ts, x_end=te, y=tcp_complete.index, color=feature,
+                                         color_continuous_scale=color_scale,
                                          custom_data=["desc"])
 
     # Update the traces by displaying the custom description, so that when the user
@@ -179,10 +184,12 @@ def tcp_complete_timeline(tcp_complete: pandas.DataFrame,
     return figure
 
 def tcp_periodic_timeline(tcp_periodic: pandas.DataFrame,
-                              bot_complete: pandas.DataFrame, token: str):
+                          bot_complete: pandas.DataFrame, token: str):
     
-    # From the original DataFrame genearate a copy containing all flows whose token
-    # is the one requested by the user
+    ##################################################
+    # Generate a copy of the original pandas DataFrame
+    # so we can edit it at free will
+    ##################################################
     selects = tcp_periodic.loc[tcp_periodic["app_token"] == token].copy()
 
     # Add the description to each flow if it does not exist yet
@@ -249,8 +256,17 @@ def tcp_periodic_timeline(tcp_periodic: pandas.DataFrame,
 
 def connection_id_timeline(tcp_periodic: pandas.DataFrame, connection_id: str, feature: str):
 
-    # From the original DataFrame genearate a copy containing all flows whose token
-    # is the one requested by the user
+    def get_line_color(feature):
+        if "s_app" in feature:
+            return "rgba(0, 255, 0, 0.6)"  # Green
+        if "c_app" in feature:
+            return "rgba(255, 0, 0, 0.6)"  # Red
+        return "rgba(0, 0, 255, 0.6)"
+
+    ##################################################
+    # Generate a copy of the original pandas DataFrame
+    # so we can edit it at free will
+    ##################################################
     selects = tcp_periodic.loc[tcp_periodic["connection_id"] == connection_id].copy()
 
     # Add the description to each flow if it does not exist yet
@@ -269,10 +285,8 @@ def connection_id_timeline(tcp_periodic: pandas.DataFrame, connection_id: str, f
         plotly.graph_objects.Scatter(
             x=[record[ts], record[te], record[te], record[ts], record[ts]],
             y=[record[ys], record[ys], record[ys] + 3, record[ys] + 3, record[ys]],
-            line=dict(color='rgba(0, 100, 200, 0.6)', width=1),
-            name=record['desc'],
-            hoverinfo='text',
-            text=record['desc'])
+            line=dict(color=get_line_color(feature), width=1),
+            name=record['desc'], hoverinfo='text', text=record['desc'])
         for _, record in selects.iterrows()])
     
     for i in range(len(selects) - 1):
@@ -293,8 +307,9 @@ def connection_id_timeline(tcp_periodic: pandas.DataFrame, connection_id: str, f
     labels = [v.strftime("%M:%S") for v in values]
 
     # Define the x-axis labels
+    y_title = "Volume (B)" if "byts" in feature else "Packets (#)"
     figure.update_yaxes(gridwidth=0.03, 
-                     title="Volume (B)", showgrid=True,
+                     title=y_title, showgrid=True,
                      title_font=dict(family="Courier New"), tickfont=dict(family="Courier New"))#, type="log")
     
     figure.update_xaxes(gridwidth=0.03, 
@@ -306,10 +321,30 @@ def connection_id_timeline(tcp_periodic: pandas.DataFrame, connection_id: str, f
 
     return figure
 
+def mean_value(tcp_periodic: pandas.DataFrame, connection_id: str, feature: str):
+
+    ##################################################
+    # Generate a copy of the original pandas DataFrame
+    # so we can edit it at free will
+    ##################################################
+    selects = tcp_periodic.loc[tcp_periodic["connection_id"] == connection_id].copy()
+    return selects[feature].mean()
+
+def stdv_value(tcp_periodic: pandas.DataFrame, connection_id: str, feature: str):
+
+    ##################################################
+    # Generate a copy of the original pandas DataFrame
+    # so we can edit it at free will
+    ##################################################
+    selects = tcp_periodic.loc[tcp_periodic["connection_id"] == connection_id].copy()
+    return selects[feature].std()
+
 def connection_id_discrete_fourier(tcp_periodic: pandas.DataFrame, connection_id: str, feature: str):
 
-    # From the original DataFrame genearate a copy containing all flows whose token
-    # is the one requested by the user
+    ##################################################
+    # Generate a copy of the original pandas DataFrame
+    # so we can edit it at free will
+    ##################################################
     selects = tcp_periodic.loc[tcp_periodic["connection_id"] == connection_id].copy()
 
     s_times = selects["unix_ts_millis"].values / 1000
