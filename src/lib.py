@@ -2,6 +2,7 @@ import pandas
 import numpy
 import plotly.express
 import plotly.graph_objects
+import scipy.interpolate
 
 
 def tcp_description(record: dict, periodic: bool) -> str:
@@ -197,13 +198,13 @@ def tcp_complete_timeline(tcp_complete: pandas.DataFrame,
 
     # Define the x-axis labels
     figure.update_yaxes(gridwidth=0.03, 
-                     title="Flow", showgrid=True,
-                     title_font=dict(family="Courier New"), tickfont=dict(family="Courier New"))
+                        title="Flow", showgrid=True,
+                        title_font=dict(family="Courier New"), tickfont=dict(family="Courier New"))
     
     figure.update_xaxes(gridwidth=0.03, 
-                     title="Time (minutes:seconds)", showgrid=True, 
-                     tickvals=values, ticktext=labels, 
-                     title_font=dict(family="Courier New"), tickfont=dict(family="Courier New"))    
+                        title="Time (minutes:seconds)", showgrid=True, 
+                        tickvals=values, ticktext=labels, 
+                        title_font=dict(family="Courier New"), tickfont=dict(family="Courier New"))    
 
     # Display the legend
     if not token and not feature:
@@ -284,136 +285,128 @@ def tcp_periodic_timeline(tcp_periodic: pandas.DataFrame,
 
     return figure
 
-def connection_id_timeline(tcp_periodic: pandas.DataFrame, connection_id: str, feature: str):
+def get_line_color(feature):
+    if "s_app" in feature:
+        return "rgba(0, 128, 0, 0.6)"  # Darker Green
+    if "c_app" in feature:
+        return "rgba(139, 0, 0, 0.6)"  # Darker Red
+    return "rgba(0, 0, 139, 0.6)"      # Default Dark Blue
 
-    def get_line_color(feature):
-        if "s_app" in feature:
-            return "rgba(0, 180, 0, 0.6)"  # Green
-        if "c_app" in feature:
-            return "rgba(200, 0, 0, 0.6)"  # Red
-        return "rgba(0, 0, 180, 0.6)"
+def connection_id_timeline(frame: pandas.DataFrame, connection_id: str, feature: str):
 
-    ##################################################
-    # Generate a copy of the original pandas DataFrame
-    # so we can edit it at free will
-    ##################################################
-    selects = tcp_periodic.loc[tcp_periodic["connection_id"] == connection_id].copy()
+    #################################################################
+    # Generate a copy of the original pandas DataFrame according to 
+    # the "connection_id" that has been selected by the user.
+    #################################################################
+    data = frame.loc[frame["connection_id"] == connection_id].copy()
 
-    # Add the description to each flow if it does not exist yet
-    # When rendering more than once the chart, the description
-    # should not be generated
-    if not "desc" in selects.columns:
-        selects["desc"] = selects.apply(lambda r: tcp_description(r, periodic=True), axis=1)
+    #################################################################
+    # Generate a description for each scatter point, so that it is
+    # easier to understand what the user is looking
+    #################################################################
+    data["info"] = data.apply(lambda r: tcp_description(r, periodic=True), axis=1)
 
-    ts = "datetime_ts"
-    te = "datetime_te"
-    ys = feature
-
+    # Create Plotly figure
     figure = plotly.graph_objects.Figure()
 
-    figure.add_traces([
-        plotly.graph_objects.Scatter(
-            x=[record[ts], record[te], record[te], record[ts], record[ts]],
-            y=[record[ys], record[ys], record[ys] + 3, record[ys] + 3, record[ys]],
-            line=dict(color=get_line_color(feature), width=1),
-            name=record['desc'], hoverinfo='text', text=record['desc'])
-        for _, record in selects.iterrows()])
-    
-    for i in range(len(selects) - 1):
-        sy = selects.iloc[i][ys] + 3
-        ey = selects.iloc[i + 1][ys] + 3
-        figure.add_trace(plotly.graph_objects.Scatter(
-            x=[selects.iloc[i][te], selects.iloc[i + 1][ts]],
-            y=[sy, ey],
-            mode='lines',
-            line=dict(color='rgba(0, 0, 0, 0.6)', width=0.4, dash='dot')))
+    for i, record in data.iterrows():
+
+        xs = "unix_ts_millis"
+        xe = "unix_te_millis"
+        ys = feature
+        ye = feature
+
+        trace = plotly.graph_objects.Scatter(x=[record[xs], record[xe]],
+                                             y=[record[ys], record[ye]],
+                                             line=dict(color=get_line_color(feature), width=2),
+                                             name=record["info"], 
+                                             hoverinfo="text", 
+                                             text=record["info"])
         
-    # Define the x-axis interval
-    xs = pandas.to_datetime(selects["unix_ts_millis"].min(), unit="ms", origin="unix")
-    xe = pandas.to_datetime(selects["unix_te_millis"].max(), unit="ms", origin="unix")
+        figure.add_trace(trace)
 
-    # Define the x-axis range
-    values = pandas.date_range(start=xs, end=xe, freq="15s")
-    labels = [v.strftime("%M:%S") for v in values]
+    # Define the x-axis range and ticks
+    s = pandas.to_datetime(data["unix_ts_millis"].min(), unit="ms", origin="unix")
+    e = pandas.to_datetime(data["unix_ts_millis"].max(), unit="ms", origin="unix")
 
-    # Define the x-axis labels
-    y_title = "Volume (B)" if "byts" in feature else "Packets (#)"
+    # Generate x-axis values (timestamps in milliseconds)
+    values = pandas.date_range(start=s, end=e, freq="15s").astype(int) / 10**6
+    labels = [pandas.to_datetime(pos, unit='ms').strftime("%M:%S") for pos in values]
+
+    # Define the y-axis settings
     figure.update_yaxes(gridwidth=0.03, 
-                     title=y_title, showgrid=True,
-                     title_font=dict(family="Courier New"), tickfont=dict(family="Courier New"))#, type="log")
+                        title="# Bytes" if "byts" in feature else "# Packets", showgrid=True,
+                        title_font=dict(family="Courier New"), tickfont=dict(family="Courier New"))
     
+     # Define the x-axis settings
     figure.update_xaxes(gridwidth=0.03, 
-                     title="Time (minutes:seconds)", showgrid=True, 
-                     tickvals=values, ticktext=labels, 
-                     title_font=dict(family="Courier New"), tickfont=dict(family="Courier New"))  
+                        title="Time (minutes:seconds)", showgrid=True, 
+                        tickvals=values, ticktext=labels, 
+                        title_font=dict(family="Courier New"), tickfont=dict(family="Courier New"))   
     
     figure.update_layout(showlegend=False)
 
     return figure
 
-def mean_value(tcp_periodic: pandas.DataFrame, connection_id: str, feature: str):
 
-    ##################################################
-    # Generate a copy of the original pandas DataFrame
-    # so we can edit it at free will
-    ##################################################
-    selects = tcp_periodic.loc[tcp_periodic["connection_id"] == connection_id].copy()
-    return selects[feature].mean()
+def connection_id_discrete_fourier(frame: pandas.DataFrame, connection_id: str, feature: str):
 
-def stdv_value(tcp_periodic: pandas.DataFrame, connection_id: str, feature: str):
+    #################################################################
+    # Generate a copy of the original pandas DataFrame according to 
+    # the "connection_id" that has been selected by the user.
+    #################################################################
+    data = frame.loc[frame["connection_id"] == connection_id].copy()
 
-    ##################################################
-    # Generate a copy of the original pandas DataFrame
-    # so we can edit it at free will
-    ##################################################
-    selects = tcp_periodic.loc[tcp_periodic["connection_id"] == connection_id].copy()
-    return selects[feature].std()
 
-def connection_id_discrete_fourier(tcp_periodic: pandas.DataFrame, connection_id: str, feature: str):
+    #################################################################
+    # Generate a discrete signal to be further converted into the FFT
+    #################################################################
+    x = []
+    y = []
 
-    ##################################################
-    # Generate a copy of the original pandas DataFrame
-    # so we can edit it at free will
-    ##################################################
-    selects = tcp_periodic.loc[tcp_periodic["connection_id"] == connection_id].copy()
+    for _, record in data.iterrows():
 
-    s_times = selects["unix_ts_millis"].values / 1000
-    e_times = selects["unix_te_millis"].values / 1000
-    values  = selects[feature].dropna().astype(float).values
+        xs = record["unix_ts_millis"]
+        xe = record["unix_te_millis"]
+        ys = record[feature]
+        ye = record[feature]
 
-    interval = 0.1  # Seconds
+        x.append(xs)
+        #x.append(xe)
+        y.append(ys)
+        #y.append(ye)
 
-    min_time   = s_times.min()
-    max_time   = e_times.max()
-    new_times  = numpy.arange(min_time, max_time, interval)
-    new_values = numpy.zeros_like(new_times)
 
-    for start, end, value in zip(s_times, e_times, values):
-        new_values[(new_times >= start) & (new_times < end)] = value
+    interpolator = scipy.interpolate.interp1d(x, y, kind='linear', fill_value="extrapolate")
 
-    dft_values = numpy.fft.fft(new_values)
-    dft_freqs  = numpy.fft.fftfreq(len(new_values), interval)
+    x_uniform = numpy.linspace(numpy.min(x), numpy.max(x), num=len(x)*1)
+    y_uniform = interpolator(x_uniform)
+    xvalues = x_uniform
+    yvalues = y_uniform
 
-    # Filter the positive frequencies
-    positive_freqs = dft_freqs >= 0
-    dft_values_positive = dft_values[positive_freqs]
-    dft_freqs_positive = dft_freqs[positive_freqs]
+    # Perform FFT
+    fft_y = numpy.fft.fft(yvalues)
+    fft_x = numpy.fft.fftfreq(len(yvalues), (xvalues[1] - xvalues[0]) / 1000)
 
-    # Create the plot with Plotly
+    # Calculate the magnitude of the FFT values
+    magnitude = numpy.abs(fft_y)
+
+    # Create Plotly figure
     figure = plotly.graph_objects.Figure()
+        
+    figure.add_trace(plotly.graph_objects.Scatter(x=fft_x[:len(fft_x)//2],
+                                                  y=magnitude[:len(magnitude)//2],
+                                                  mode='lines',
+                                                  line=dict(color=get_line_color(feature), width=2)))
 
-    # Add the magnitude of the DFT as a stem plot
-    figure.add_trace(plotly.graph_objects.Scatter(x=dft_freqs_positive,
-                                                  y=numpy.abs(dft_values_positive),
-                                                  mode='lines', name='DFT Magnitude'))
-
-    # Define the x-axis labels
+    # Define the y-axis settings
     figure.update_yaxes(gridwidth=0.03, 
-                     title="Amplitude", showgrid=True,
-                     title_font=dict(family="Courier New"), tickfont=dict(family="Courier New"))#, type="log")
+                        title="Magnitude", showgrid=True,
+                        title_font=dict(family="Courier New"), tickfont=dict(family="Courier New"))
     
+     # Define the x-axis settings
     figure.update_xaxes(gridwidth=0.03, 
-                     title="Frequency", showgrid=True, 
-                     title_font=dict(family="Courier New"), tickfont=dict(family="Courier New"))  
+                        title="Frequency (Hz)", showgrid=True, 
+                        title_font=dict(family="Courier New"), tickfont=dict(family="Courier New"))   
 
     return figure

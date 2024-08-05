@@ -77,70 +77,70 @@ def data_over_tcp(path: str):
     with col1:
 
         feature = "s_app_byts"
-        figure  = src.lib.connection_id_timeline(tcp_periodic=tcp_periodic_frame, connection_id=connection_id, feature=feature)
+        figure  = src.lib.connection_id_timeline(frame=tcp_periodic_frame, connection_id=connection_id, feature=feature)
         streamlit.plotly_chart(figure)
         streamlit.caption(f"_Progressione byte inviati dal server_")
 
-        feature = "s_app_byts"
-        figure  = src.lib.connection_id_discrete_fourier(tcp_periodic=tcp_periodic_frame, connection_id=connection_id, feature=feature)
-        streamlit.plotly_chart(figure)
-        streamlit.caption(f"_Spettro di frequenza del segnale_")
+        # feature = "s_app_byts"
+        # figure  = src.lib.connection_id_discrete_fourier(frame=tcp_periodic_frame, connection_id=connection_id, feature=feature)
+        # streamlit.plotly_chart(figure)
+        # streamlit.caption(f"_Spettro di frequenza del segnale_")
 
         feature = "s_app_pkts"
-        figure = src.lib.connection_id_timeline(tcp_periodic=tcp_periodic_frame, connection_id=connection_id, feature=feature)
+        figure = src.lib.connection_id_timeline(frame=tcp_periodic_frame, connection_id=connection_id, feature=feature)
         streamlit.plotly_chart(figure)
         streamlit.caption(f"_Progressione pacchetti inviati dal server_")
 
-        feature = "s_app_pkts"
-        figure = src.lib.connection_id_discrete_fourier(tcp_periodic=tcp_periodic_frame, connection_id=connection_id, feature=feature)
-        streamlit.plotly_chart(figure)
-        streamlit.caption(f"_Spettro di frequenza del segnale_")
-        streamlit.markdown("---")
+        # feature = "s_app_pkts"
+        # figure = src.lib.connection_id_discrete_fourier(frame=tcp_periodic_frame, connection_id=connection_id, feature=feature)
+        # streamlit.plotly_chart(figure)
+        # streamlit.caption(f"_Spettro di frequenza del segnale_")
+        # streamlit.markdown("---")
 
         feature = "s_ack_pkts"
-        figure = src.lib.connection_id_timeline(tcp_periodic=tcp_periodic_frame, connection_id=connection_id, feature=feature)
+        figure = src.lib.connection_id_timeline(frame=tcp_periodic_frame, connection_id=connection_id, feature=feature)
         streamlit.plotly_chart(figure)
         streamlit.caption(f"_Progressione pacchetti inviati dal server_")
 
-        feature = "s_ack_pkts"
-        figure = src.lib.connection_id_discrete_fourier(tcp_periodic=tcp_periodic_frame, connection_id=connection_id, feature=feature)
-        streamlit.plotly_chart(figure)
-        streamlit.caption(f"_Spettro di frequenza del segnale_")
-        streamlit.markdown("---")
+        # feature = "s_ack_pkts"
+        # figure = src.lib.connection_id_discrete_fourier(frame=tcp_periodic_frame, connection_id=connection_id, feature=feature)
+        # streamlit.plotly_chart(figure)
+        # streamlit.caption(f"_Spettro di frequenza del segnale_")
+        # streamlit.markdown("---")
 
     with col2:
 
         feature = "c_app_byts"
-        figure  = src.lib.connection_id_timeline(tcp_periodic=tcp_periodic_frame, connection_id=connection_id, feature=feature)
+        figure  = src.lib.connection_id_timeline(frame=tcp_periodic_frame, connection_id=connection_id, feature=feature)
         streamlit.plotly_chart(figure)
         streamlit.caption(f"_Progressione byte inviati dal client_")
 
-        feature = "c_app_byts"
-        figure  = src.lib.connection_id_discrete_fourier(tcp_periodic=tcp_periodic_frame, connection_id=connection_id, feature=feature)
-        streamlit.plotly_chart(figure)
-        streamlit.caption(f"_Spettro di frequenza del segnale_")
+        # feature = "c_app_byts"
+        # figure  = src.lib.connection_id_discrete_fourier(frame=tcp_periodic_frame, connection_id=connection_id, feature=feature)
+        # streamlit.plotly_chart(figure)
+        # streamlit.caption(f"_Spettro di frequenza del segnale_")
 
         feature = "c_app_pkts"
-        figure = src.lib.connection_id_timeline(tcp_periodic=tcp_periodic_frame, connection_id=connection_id, feature=feature)
+        figure = src.lib.connection_id_timeline(frame=tcp_periodic_frame, connection_id=connection_id, feature=feature)
         streamlit.plotly_chart(figure)
         streamlit.caption(f"_Progressione pacchetti inviati dal client_")
 
-        feature = "c_app_pkts"
-        figure = src.lib.connection_id_discrete_fourier(tcp_periodic=tcp_periodic_frame, connection_id=connection_id, feature=feature)
-        streamlit.plotly_chart(figure)
-        streamlit.caption(f"_Spettro di frequenza del segnale_")
-        streamlit.markdown("---")
+        # feature = "c_app_pkts"
+        # figure = src.lib.connection_id_discrete_fourier(frame=tcp_periodic_frame, connection_id=connection_id, feature=feature)
+        # streamlit.plotly_chart(figure)
+        # streamlit.caption(f"_Spettro di frequenza del segnale_")
+        # streamlit.markdown("---")
 
         feature = "c_ack_pkts"
-        figure = src.lib.connection_id_timeline(tcp_periodic=tcp_periodic_frame, connection_id=connection_id, feature=feature)
+        figure = src.lib.connection_id_timeline(frame=tcp_periodic_frame, connection_id=connection_id, feature=feature)
         streamlit.plotly_chart(figure)
         streamlit.caption(f"_Progressione pacchetti inviati dal server_")
 
-        feature = "c_ack_pkts"
-        figure = src.lib.connection_id_discrete_fourier(tcp_periodic=tcp_periodic_frame, connection_id=connection_id, feature=feature)
-        streamlit.plotly_chart(figure)
-        streamlit.caption(f"_Spettro di frequenza del segnale_")
-        streamlit.markdown("---")
+        # feature = "c_ack_pkts"
+        # figure = src.lib.connection_id_discrete_fourier(frame=tcp_periodic_frame, connection_id=connection_id, feature=feature)
+        # streamlit.plotly_chart(figure)
+        # streamlit.caption(f"_Spettro di frequenza del segnale_")
+        # streamlit.markdown("---")
 
 
 
