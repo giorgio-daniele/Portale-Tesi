@@ -2,7 +2,6 @@ import pandas
 import numpy
 import plotly.express
 import plotly.graph_objects
-import scipy.interpolate
 
 def bytes_to_human_readable(b):
 
